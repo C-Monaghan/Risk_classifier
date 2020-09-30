@@ -12,6 +12,7 @@ import random as rd
 import operator as op
 import math
 from inspect import signature
+import pandas as pd
 
 def get_arity(self, operator):
 		"""
@@ -27,10 +28,10 @@ class Objective:
 		to_max = True,
 		best_known_value = None,
 		worst_known_value = None):
-	self.index = index
-	self.to_max = to_max
-	self.best_known_value = best_known_value
-	self.worst_known_value = worst_known_value
+		self.index = index
+		self.to_max = to_max
+		self.best_known_value = best_known_value
+		self.worst_known_value = worst_known_value
 	
 	def set_best_known_value(value):
 		self.best_known_value = value
@@ -40,18 +41,18 @@ class Objective:
 		
 class Individual:
 	def __init__(
-		self,
-		generation_of_creation,
-		genotype, 
-		phenotype = None,
-		objective_values = None,
-		n_dominators = None,                 #used in MOEA, pareto dominance
-		n_dominated_solutions = None,        #used in MOEA, pareto dominance
-		dominated_solutions = None,          #used in NSGA-II
-		local_crowding_distance = None,      #used in NSGA-II
-		non_domination_rank = None,          #used in NSGA-II):
+			self,
+			generation_of_creation,
+			genotype, 
+			phenotype = None,
+			objective_values = None,
+			n_dominators = None,                 #used in MOEA, pareto dominance
+			n_dominated_solutions = None,        #used in MOEA, pareto dominance
+			dominated_solutions = None,          #used in NSGA-II
+			local_crowding_distance = None,      #used in NSGA-II
+			non_domination_rank = None):          #used in NSGA-II
 
-		self.generation_of_creation = generation_of_creation,
+		self.generation_of_creation = generation_of_creation
 		self.genotype = genotype
 		self.phenotype = phenotype
 		self.n_dominators = n_dominators
@@ -65,14 +66,19 @@ class Individual:
 		
 class Attribute:
 	def __init__(self,
-		index,                        #index of the attribute in the dataset
-		type,
-		crucial_values = None,
-		available_values = None)
+			index,                        #index of the attribute in the dataset
+			name,
+			type,
+			crucial_values = None,
+			all_values = None,
+			available_values = None):
 	
-	self.type = type
-	self.crucial_values = crucial_values
-	self.available_values = available_values
+		self.index = index
+		self.name = name
+		self.type = type
+		self.all_values = all_values
+		self.crucial_values = crucial_values
+		self.available_values = available_values
 	
 class DT_Node:
 	def __init__(self, 
@@ -139,11 +145,13 @@ class DecisionTree_EA:
 		:param tree_type can be oblique or axis-parallel
 		"""
 		self.output_labels = output_labels
+		self.tree_type = tree_type
 		self.attributes = {}
 		self.objectives = {}
 		self.n_objectives = 0
 		self.generation = 0
 		self.population = []
+		print("Called")
 		
 	def add_attribute(self,
 			name,
@@ -160,10 +168,12 @@ class DecisionTree_EA:
 			worst_known_value = None):
 		self.objectives[self.n_objectives] = Objective(to_max = to_max,
 													best_known_value = best_known_value,
-													worst_known_value = worst_known_value):
+													worst_known_value = worst_known_value)
 		self.n_objectives = self.n_objectives + 1
 	
-	def create_individual()
+	def create_individual_from_R(R_tree):
+		
+		pass
 
 	def attribute_mutation(self,
 			individual):
@@ -177,3 +187,40 @@ class DecisionTree_EA:
 			individual1,
 			individual2):
 		pass
+		
+	def evaluate_individual(self,
+			root_node,
+			data):
+		if root_node.operator(root_node.comparable_value, data[root_node.attribute.index]):
+			return self.evaluate_individual(root_node.children[0],data)
+		else:
+			return self.evaluate_individual(root_node.children[1],data)
+			
+	def tree_from_r(self, tree):
+		print("In the class")
+		data = pd.DataFrame(tree)
+		labels = data["RHS"]
+		#rules = data.loc[:,"LHS"]
+		rules = data["LHS"]
+		attributes = []
+		for rule in rules:
+			rule = str(rule)
+			print("str rule", rule[0:2])
+			#split_rules = rules.split("&")
+		#	for split_rule in split_rules:
+		#		attribute = split_rule.split(" ")[0]
+		#		attributes.append(attribute)
+		#unique_attributes = set(attributes)
+		#print("unique_attributes\n",unique_attributes)
+				
+			
+		#self.labels = set(labels)
+		#print(self.labels)
+	
+	def get_attributes_from_r_trees(self, trees):
+		for tree in trees:
+			pass
+		
+
+C = DecisionTree_EA()
+print("Hello")

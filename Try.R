@@ -66,6 +66,12 @@ out_lasso<-glmnet(x,y,alpha = 1,lambda = grid,family = "binomial")
 lasso.coeff<-predict(out_lasso,type = "coefficients",s=bestlam_lasso)[1:20,]
 lasso.coeff[lasso.coeff!=0]
 
+
+
+
+
+
+
 # Trying decision trees
 GermanCredit<-GermanCredit[,c(1,2,3,5,8,9,10,11,13,14,15,16,19,20)]
 prop.table(table(GermanCredit$Class))
@@ -200,5 +206,20 @@ res_b<-sum(diag(tab_b))/sum(tab_b)
 res_b
 confusionMatrix(data = pred_b, reference = GermanCredit$Class)
 
+
+
+#interpretation
+library("tidyrules")
+library("dplyr")
+library("pander")
+rules_r <- tidyRules(fit.r)
+print(rules_r)
+print(rules_r[2])
+
+library("reticulate")
+use_python("C:/Users/fredx/Anaconda3",required=T)
+source_python("Source_EA.py")
+C = DecisionTree_EA()
+tree_from_r(rules_r)
 
 
