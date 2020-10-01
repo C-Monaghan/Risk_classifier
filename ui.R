@@ -40,28 +40,34 @@ shinyUI(ui = tagList(
              tableOutput("table")
     ),
     
-    # Analysis ----------------------------------------------------------------
-    tabPanel("Analysis", "This panel is intentionally left blank",
+    # Classifier (Analysis) ----------------------------------------------------------------
+    tabPanel("Classifier", "This panel is intentionally left blank",
              
              selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
              verbatimTextOutput("summary"),
              tableOutput("table")
     ),
+    
     # Guides ------------------------------------------------------------------
-    tabPanel("Guides", "This panel is intentionally left blank",
-             mainPanel(width = 9,
-                       tabsetPanel(
-                         tabPanel("Tab 3", "This panel is intentionally left blank",
-                                  textInput("txt", "Text input:", "general"),
-                                  tags$h5("Default actionButton:"),
-                                  actionButton("action", "Search"),
-                                  
-                                  tags$h5("actionButton with CSS class:"),
-                                  actionButton("action2", "Action button", class = "btn-primary")
-                         )
-                       )
-             ),
-    ),
+    tabPanel("Guides", 
+             br(),
+             bsCollapse(id = "Machine_Learning_based_Classifier_desc", open = "Machine Learning based Classifier Usage Guide",
+                        bsCollapsePanel("Machine Learning based Classifier Usage Guide",
+                                        
+                                        includeHTML("Machine_Learning_based_Classifier_desc_ug.html"),
+                                        style = "primary"),
+                         bsCollapsePanel("Machine Learning based Classifier Conceptual Explanation",
+                        
+                                         includeHTML("Machine_Learning_based_Classifier_desc_ce.html"),
+                                         style = "info"),
+                         bsCollapsePanel("Machine Learning based Classifier Technical Details",
+                        
+                                         includeHTML("Machine_Learning_based_Classifier_desc_td.html"),
+                                         style = "info")
+             )
+             
+                        
+    ), 
     
     # About Us ----------------------------------------------------------------
     tabPanel("About Us", "This panel is intentionally left blank",

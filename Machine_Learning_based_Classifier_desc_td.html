@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>MathJax example</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+</head>
+
+<body>
+
+<h3 style="text-align: center;">&nbsp;<strong>Machine Learning based Classifier</strong></h3>
+<div>
+<p>The model can be formulate as follow:</p>
+</div>
+<p>\[\underline{x_i} = \mathbf{W}\underline{u_i} +&nbsp;\underline{\mu} + \underline{\epsilon_i}\]</p>
+<p>&nbsp;where&nbsp;</p>
+<ul>
+<li>\(\underline{x_i}\) is the vector of observed variables for subject i.</li>
+<li>\(\mathbf{W}\) is the \(p \times q\) loadings matrix</li>
+<li>\(\underline{u_i}\) is the vector of Gaussian latent variable or it can be viewed as principal score of subject i</li>
+<li>\(\underline{\mu}\) is the mean vector of subject i</li>
+<li>\(\underline{\epsilon_i}\) is the multivariate Gaussian noise for observation i</li>
+</ul>
+<p>The model has a few assumptions in order to obtain the parameter estimates:</p>
+<ol>
+<li>\(\underline{\epsilon_i} \sim MVN(\underline{0}, \sigma^2 \mathbf{I})\)</li>
+<li><strong>For PPCA:&nbsp;</strong>\(\underline{u_i} \sim MVN(\underline{0}, \mathbf{I})\)&nbsp; &nbsp; &nbsp;while&nbsp; &nbsp; &nbsp;<span style="color: #0000ff;"><strong>For PPCCA:&nbsp;</strong></span>\(\underline{u_i} \sim MVN(\) <span style="color: #0000ff;">\(\underline{\delta_i}\)</span> \(, \mathbf{I})\)</li>
+</ol>
+<p>where \(\mathbf{I}\) is the Identity matrix</p>
+<p><span style="text-decoration: underline;"><strong>Model Algorithm:</strong></span></p>
+<ol>
+<li>Initialise loadings matrix,&nbsp;\(\mathbf{W}\), and sigma parameter,&nbsp;\(\sigma\)&nbsp;</li>
+<li>Calculate the conditional expectation of the score,&nbsp;\(\mathbb{E}(\underline{u_i}|...)\) (E step)&nbsp;</li>
+<li>Calculate the maximum likelihood function with respect to the parameters and re-initialize them</li>
+<li>Repeat step 2 and 3 until convergence criterion is achieved or until maximum iteration is arrived.</li>
+</ol>
+
+</body>
+</html>
