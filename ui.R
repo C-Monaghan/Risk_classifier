@@ -33,11 +33,16 @@ shinyUI(ui = tagList(
     ),
     
     # Dataset Input ----------------------------------------------------------------
-    tabPanel("Dataset", "This panel is intentionally left blank",
-             
-             selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
-             verbatimTextOutput("summary"),
-             tableOutput("table")
+    tabPanel("Dataset",  sidebarPanel(width = 3,
+                                      
+                                      fileInput("sample_file", h4("File input:", bsButton("main_data_tooltip", label = "",
+                                                                                          icon = icon("question"), size = "extra-small")),
+                                                multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
+                                                placeholder = "Enter Your Data Here"),
+                                      bsPopover("main_data_tooltip", title="",
+                                                content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the varibale to be estimated",
+                                                trigger = "hover")
+    )
     ),
     
     # Classifier (Analysis) ----------------------------------------------------------------
