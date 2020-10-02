@@ -5,7 +5,13 @@ Created on Sun Sep 17 23:15:50 2020
 
 @author: Fred Valdez Ameneyro
 
-#My Evolutionary Algorithm for Decision Trees
+My Evolutionary Algorithm for Decision Trees
+Features:
+Evolution seeded with the output of existing methods
+Evolve towards different objectives
+Can output multiple trees with particular advantages when there are conflicting objectives
+Existing solutions can be evolved further
+test
 """
 import numpy as np
 import random as rd
@@ -14,14 +20,14 @@ import math
 from inspect import signature
 import pandas as pd
 
-def get_arity(self, operator):
-		"""
-		Returns the arity of the method, operator or funtion as an int
-		:param operator: is a method, operator or funtion
-		"""
-		sig = signature(operator)
-		arity = len(sig.parameters)
-		return arity
+def get_arity(operator):
+	"""
+	Returns the arity of the method, operator or funtion as an int
+	:param operator: is a method, operator or funtion
+	"""
+	sig = signature(operator)
+	arity = len(sig.parameters)
+	return arity
 		
 class Objective:
 	def __init__(self,
@@ -68,10 +74,10 @@ class Attribute:
 	def __init__(self,
 			index,                        #index of the attribute in the dataset
 			name,
-			type,
-			crucial_values = None,
-			all_values = None,
-			available_values = None):
+			type = None,
+			crucial_values = [],
+			all_values = [],
+			available_values = []):
 	
 		self.index = index
 		self.name = name
@@ -80,21 +86,70 @@ class Attribute:
 		self.crucial_values = crucial_values
 		self.available_values = available_values
 	
+	def add_crucial_value(self,value):
+		if value in self.crucial_values:
+			index = self.crucial_values.index(value)
+			return index
+		else:
+			index = len(self.crucial_values)
+			self.crucial_values.append(value)
+			print("Added crucial value ", str(value), " to attribute ", self.name)
+			return index
+	
+	def __str__(self):
+		return "Attribute " + self.name + " idx " + self.index + " n_crucial_values" + str(len(self.crucial_values))  
+	
 class DT_Node:
-	def __init__(self, 
-			attribute,
-			comparable_value_index,
-			operator,
-			parent = None,
-			children = []):
-
+	def __init__(self, parent = None):
+		self.updated=False
+		self.parent=parent
+		self.children = []
+		self.children_names = []
+		self.output_label = None
+	
+	def update(self,attribute,comparable_value_index,value,operator):
+		self.updated = True
 		self.attribute = attribute
-		self.comparable_value = self.attribute.crucial_values[comparable_value_index]
-		self.parent = parent
-		self.children = children
-
+		self.comparable_value = value #float(self.attribute.crucial_values[comparable_value_index]) #all are floats rn
+		self.comparable_value_index = comparable_value_index
+		self.operator = operator
+	
+	def add_child(self,name):
+		child = DT_Node(parent=self)
+		self.children.append(child)
+		self.children_names.append(name)
+		print("Added child named ", name)
+		return child
+	
+	def set_output_label(self, output_label):
+		self.output_label = output_label
+	
+	def evaluate(self,data_row):
+		#data_row = pd.DataFrame(data_row)
+		#"""
+		print("data_row",data_row)
+		print("node",str(self))
+		print("value", str(data_row.iloc[self.comparable_value_index]))
+		print("value type", type(data_row.iloc[self.comparable_value_index]))
+		print("operator",str(self.operator))
+		print("comparable_value",str(self.comparable_value))
+		print("comparable_value type",type(self.comparable_value))
+		#assert self.operator(self.comparable_value, data_row.iloc[self.comparable_value_index])
+		#print("result", str(self.operator(self.comparable_value, data_row.iloc[self.comparable_value_index])))
+		#"""
+		if self.output_label is None:
+			if type(self.comparable_value) == "str" or type(data_row.iloc[self.comparable_value_index]) == "str":
+				return "wrong"
+			else:
+				if self.operator(self.comparable_value, data_row.iloc[self.comparable_value_index]):
+					return self.children[0].evaluate(data_row)
+				else:
+					return self.children[1].evaluate(data_row)
+		else:
+			return self.output_label
+		#"""
 	def is_terminal(self):
-		return children == []
+		return self.output_label is None
 
 	def is_root(self):
 		return self.parent is None
@@ -132,36 +187,29 @@ class DT_Node:
 		return the_copy
 
 	def __str__(self):
-			return name_string
+			return "Node " + self.attribute.name + str(self.operator) + str(self.comparable_value)
 
-class DecisionTree_EA:
-	def __init__(self,
-			output_labels = [0,1],
-			tree_type = "oblique"):
-		
-		"""
-		The EA needs attributes and objectives to be added with the add_attribute and add_objective functions
-		:param output_labels are all possible output labels
-		:param tree_type can be oblique or axis-parallel
-		"""
-		self.output_labels = output_labels
-		self.tree_type = tree_type
+class DecisionTree_EA: #oblique, binary trees
+	def __init__(self):
+			
+		self.output_labels = []
+		self.unique_output_labels = []
 		self.attributes = {}
+		self.operators = []
 		self.objectives = {}
 		self.n_objectives = 0
 		self.generation = 0
 		self.population = []
-		print("Called")
-		
-	def add_attribute(self,
-			name,
-			type,
-			crucial_values = None,          #for numerical attributes
-			available_values = None):       #for categorical attributes
-		self.attributes[name] = Attribute(type=type,
-										crucial_values=crucial_values,
-										available_values=available_values)
+		self.parsing_operators = []
+		self.operators_db = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
+		self.inverse_operators = {op.lt:op.ge,op.le:op.gt,op.gt:op.le,op.ge:op.lt,op.eq:op.ne}
+		print("Called class DecisionTree_EA")
 										
+	def add_operator(self,operator): #operators with compatibility to certain attributes?
+		if operator not in self.operators:
+			self.operators.append(operator)
+			print("Added new operator:",str(operator))
+	
 	def add_objective(self,
 			to_max = True,
 			best_known_value = None,
@@ -188,39 +236,92 @@ class DecisionTree_EA:
 			individual2):
 		pass
 		
-	def evaluate_individual(self,
-			root_node,
-			data):
-		if root_node.operator(root_node.comparable_value, data[root_node.attribute.index]):
-			return self.evaluate_individual(root_node.children[0],data)
+	def evaluate_tree(self,root_node,provisional_data=None):
+		if provisional_data is None:
+			data = self.data
 		else:
-			return self.evaluate_individual(root_node.children[1],data)
+			data = provisional_data
+		output_array = []
+		for index, row in data.iterrows():
+			if index == 1:
+				root_node.evaluate(row)
 			
-	def tree_from_r(self, tree):
-		print("In the class")
-		data = pd.DataFrame(tree)
-		labels = data["RHS"]
-		#rules = data.loc[:,"LHS"]
-		rules = data["LHS"]
-		attributes = []
-		for rule in rules:
-			rule = str(rule)
-			print("str rule", rule[0:2])
-			#split_rules = rules.split("&")
-		#	for split_rule in split_rules:
-		#		attribute = split_rule.split(" ")[0]
-		#		attributes.append(attribute)
-		#unique_attributes = set(attributes)
-		#print("unique_attributes\n",unique_attributes)
-				
 			
-		#self.labels = set(labels)
-		#print(self.labels)
-	
-	def get_attributes_from_r_trees(self, trees):
-		for tree in trees:
-			pass
+	def adapt_to_data(self, labels, data):
+		self.data = pd.DataFrame(data)
+		for i, attribute in enumerate(self.data.columns):
+			self.attributes[attribute] = Attribute(index=i, name=attribute)
+			print("added attribute",attribute)
+		self.output_labels = list(labels)
+		self.unique_output_labels = set(list(labels))
+		self.dataset = data
+		print("unique_output_labels",self.unique_output_labels)
 		
+	
+	def parse_tree_r(self, tree):
+		pd_tree = pd.DataFrame(tree)
+		labels = pd_tree["RHS"]
+		rules = pd_tree["LHS"]
+		#rules = rules[:20]                                   #for testing
+		root_node = DT_Node()
+		for rule_index,rule in enumerate(rules):
+			print("Parsing rule ", rule)
+			node = root_node
+			rule = str(rule)
+			comparisons = rule.split(" & ")           #& symbol should not be in the name of any attribute, verify later
+			n_comparisons = len(comparisons)-1
+			for comp_idx,comparison in enumerate(comparisons):
+				if comparison in node.children_names:
+					child_index = node.children_names.index(comparison)
+					child = node.children[child_index]
+				else:
+					if node.updated:
+						pass
+						#attribute = node.attribute
+						#attribute, operator, value, value_index = self.parse_comparison(comparison, attribute=attribute)
+						#if self.inverse_operators[operator] == operator:
+						#	child = node.add_child(name=comparison)
+						#pass
+					else:
+						attribute, operator, value, value_index = self.parse_comparison(comparison)
+						node.update(attribute=attribute,
+									comparable_value_index=value_index,
+									value=value,
+									operator=operator)
+					child = node.add_child(name=comparison)
+				#if n_comparisons == comp_idx:
+				node = child
+			node.set_output_label(labels[rule_index])
+		return root_node
+	
+	def parse_comparison(self,comparison,attribute=None):
+		#print("parsing comparison ", comparison)
+		
+		#Search for the attribute
+		if attribute is None:
+			for attribute_n,attribute_c in self.attributes.items():
+				str_index = comparison.find(attribute_n)
+				if str_index != -1:
+					attribute = attribute_c
+					break
+		else:
+			str_index = comparison.find(attribute.name)
+			if str_index == -1:
+				print("Error, wrong attribute")
+			
+		if attribute is None:
+			print("Error, no attribute was matched")
+			
+		#Get variables
+		attribute_name = attribute.name
+		remainder = comparison[str_index+len(attribute_name):].strip()
+		operator = self.operators_db[remainder.split(" ")[0]]
+		value = float(remainder.split(" ")[1]) #all are floats because of this
+		
+		#Add to the model
+		self.add_operator(operator)
+		value_index = attribute.add_crucial_value(value)
+		
+		return attribute, operator, value, value_index
 
-C = DecisionTree_EA()
-print("Hello")
+#
