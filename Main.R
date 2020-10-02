@@ -13,13 +13,13 @@ library("dplyr")
 library("pander")
 library(caret)
 
+# Loading the dataset
 load("GermanCredit.Rdata")
-
 GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
-
 default_data <- GermanCredit
 
-Classifier<-function(default_data,choose_regression = TRUE) {
+# The main function
+Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
   
   # Cleaning the data before using
   default_data<-na.omit(default_data)
@@ -62,7 +62,7 @@ Classifier<-function(default_data,choose_regression = TRUE) {
     # Stepwise regression model
     biggest <- formula(glm(default_data[,1]~.,default_data[,-1], family = "binomial"))
     fwd.model<-step(glm(default_data[,1]~1, data=default_data[,-1],family = "binomial"),
-                    direction = "forward", scope = biggest)
+                    direction = "forward", scope = biggest,trace = 0)
     
     # Reduced dataset
     default_data<-as.data.frame(x[,names(fwd.model$coefficients[-1])])
@@ -83,7 +83,7 @@ Classifier<-function(default_data,choose_regression = TRUE) {
   # You construct all possible combinations
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
                 recursive=FALSE)
-  id<-sample(id, 1000, replace=FALSE)
+  id<-sample(id, selection, replace=FALSE)
   
   # You paste them to formulas
   Formulas <- sapply(id,function(i)
@@ -91,26 +91,26 @@ Classifier<-function(default_data,choose_regression = TRUE) {
   
   # Storing all the combination of trees
   Forest = list()
-  for(i in 1:1000) {
+  for(i in 1:selection) {
     RPI = rpart(Formulas[[i]],data=default_data,method = "class")
     Forest[[i]] = RPI
   }
   
   #~~~~~~~~  TESTING PERFORMANCE
   pred = list()
-  for(i in 1:1000) {
+  for(i in 1:selection) {
     RPI<-predict(Forest[i],type="class")
     pred[[i]] = RPI
   }
   
   tab= list()
-  for(i in 1:1000) {
+  for(i in 1:selection) {
     RP<-table(default_data[,1],pred[[i]][[1]])
     tab[[i]] = RP
   }
   
   res= list()
-  for(i in 1:1000) {
+  for(i in 1:selection) {
     RP<-sum(diag(tab[[i]]))/sum(tab[[i]])
     res[[i]] = RP
   }
@@ -120,6 +120,8 @@ Classifier<-function(default_data,choose_regression = TRUE) {
   return(list(Data=dim(default_data), Trees=Forest,Performance=res))
 }
 
+# a<-Classifier(default_data,1,500)
+# rpart.plot(a$Trees[[500]])
 
 #interpretation
 rules_r <- tidyRules(fit.r)

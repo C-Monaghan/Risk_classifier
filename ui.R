@@ -32,6 +32,27 @@ shinyUI(ui = tagList(
              )
     ),
     
+    # Guides ------------------------------------------------------------------
+    tabPanel("Guides", 
+             br(),
+             bsCollapse(id = "Machine_Learning_based_Classifier_desc", open = "Machine Learning based Classifier Usage Guide",
+                        bsCollapsePanel("Machine Learning based Classifier Usage Guide",
+                                        
+                                        includeHTML("Machine_Learning_based_Classifier_desc_ug.html"),
+                                        style = "primary"),
+                        bsCollapsePanel("Machine Learning based Classifier Conceptual Explanation",
+                                        
+                                        includeHTML("Machine_Learning_based_Classifier_desc_ce.html"),
+                                        style = "info"),
+                        bsCollapsePanel("Machine Learning based Classifier Technical Details",
+                                        
+                                        includeHTML("Machine_Learning_based_Classifier_desc_td.html"),
+                                        style = "info")
+             )
+             
+             
+    ), 
+    
     # Dataset Input ----------------------------------------------------------------
     tabPanel("Dataset",  sidebarPanel(width = 3,
                                       
@@ -53,26 +74,7 @@ shinyUI(ui = tagList(
              tableOutput("table")
     ),
     
-    # Guides ------------------------------------------------------------------
-    tabPanel("Guides", 
-             br(),
-             bsCollapse(id = "Machine_Learning_based_Classifier_desc", open = "Machine Learning based Classifier Usage Guide",
-                        bsCollapsePanel("Machine Learning based Classifier Usage Guide",
-                                        
-                                        includeHTML("Machine_Learning_based_Classifier_desc_ug.html"),
-                                        style = "primary"),
-                         bsCollapsePanel("Machine Learning based Classifier Conceptual Explanation",
-                        
-                                         includeHTML("Machine_Learning_based_Classifier_desc_ce.html"),
-                                         style = "info"),
-                         bsCollapsePanel("Machine Learning based Classifier Technical Details",
-                        
-                                         includeHTML("Machine_Learning_based_Classifier_desc_td.html"),
-                                         style = "info")
-             )
-             
-                        
-    ), 
+    
     
     # About Us ----------------------------------------------------------------
     tabPanel("About Us", "This panel is intentionally left blank",
