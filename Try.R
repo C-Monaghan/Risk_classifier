@@ -223,6 +223,6 @@ PDT <- DecisionTree_EA()
 PDT$'adapt_to_data'(labels = GermanCredit$Class, data=GermanCredit)
 tree <- PDT$'parse_tree_r'(rules_r)
 #tree$'evaluate'(GermanCredit[2,])
-output <- PDT$'evaluate_tree'(tree)
-  
+porc <- PDT$'evaluate_tree'(tree)
+porc  
 
