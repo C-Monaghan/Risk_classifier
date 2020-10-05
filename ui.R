@@ -62,8 +62,26 @@ shinyUI(ui = tagList(
                                                 placeholder = "Enter Your Data Here"),
                                       bsPopover("main_data_tooltip", title="",
                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the varibale to be estimated",
-                                                trigger = "hover")
-    )
+                                                trigger = "hover"), 
+                                      
+                                      h5("1.Please Select Input Values:",align="centre"),
+                                      # Input: Variable Selection Method ----
+                                      radioButtons("method", "Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression")),
+                                  
+                                      
+                                      # Input: No. of Decision Trees ----
+                                      sliderInput("trees", "How many Decision Trees user wants?",
+                                                 min = 10, max=1000,
+                                                 step = 1,animate = TRUE,value = 100)
+                                      
+                                      
+    ),  # Main panel for displaying outputs ----
+    mainPanel(
+      tabsetPanel(
+        type="tab",
+        tabPanel("Dataset description",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate"))
+       )
+      )
     ),
     
     # Classifier (Analysis) ----------------------------------------------------------------
@@ -82,9 +100,7 @@ shinyUI(ui = tagList(
              selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
              verbatimTextOutput("summary"),
              tableOutput("table")
+             
     )
-    
-    
-    
     
   )))
