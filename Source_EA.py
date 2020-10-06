@@ -19,6 +19,7 @@ import operator as op
 import math
 from inspect import signature
 import pandas as pd
+import copy
 
 def get_arity(operator):
 	"""
@@ -125,8 +126,9 @@ class DT_Node:
 		self.comparable_value_index = comparable_value_index
 		self.operator = operator
 	
-	def add_child(self,name):
-		child = DT_Node(parent=self)
+	def add_child(self,name,child=None):
+		if child is None:
+			child = DT_Node(parent=self)
 		self.children = self.children + [child]
 		self.children_names = self.children_names + [name]
 		print("Added child named ", name , ",new child count", str(len(self.children)))
@@ -166,51 +168,70 @@ class DT_Node:
 		else:
 			#print("Output:",self.output_label)
 			return self.output_label
-		#"""
+
 	def is_terminal(self):
-		return self.output_label is None
+		return self.children == []
 
 	def is_root(self):
 		return self.parent is None
 
-	def get_subtree_nodes(self):
+	def get_subtree_nodes(self, include_self = True):
 		"""
 		Returns a list with all the nodes of the subtree with this node as the root node, including himself
 		"""
 		nodes = [self]
 		i = 0
 		while i < len(nodes):
-			if not nodes[i].is_terminal:
+			if not nodes[i].is_terminal():
 				nodes.extend(nodes[i].children)
 			i += 1
-		return nodes
+		if include_self:
+			return nodes
+		else:
+			return nodes[1:]
 
 	def get_max_depth(self, depth = 0):
 		"""
 		Returns the max depth of this tree as an int
 		"""
 		new_depth = depth + 1
-		if self.is_terminal:
+		if self.is_terminal():
 			return new_depth
 		else:
 			return max([child.my_depth(new_depth) for child in self.children])
+
+	def node_already_in_branch(self, node=None):
+		if self.parent is None:
+			return False
+		else:
+			if self == node:
+				return True
+			else:
+				return parent.node_already_in_branch(node=node)
 
 	def copy(self, parent=None):
 		"""
 		Don't give arguments. Returns an unrelated new item with the same characteristics
 		"""
-		the_copy = GP_Node(self.content, parent = parent)
-		if not self.is_terminal:
-			for child in self.children:
-				the_copy.children.append(child.copy(parent = the_copy))
+		the_copy = DT_Node(parent = parent)
+		the_copy.update(attribute=self.attribute,
+						comparable_value_index = self.comparable_value_index,
+						comparable_value = self.comparable_value,
+						operator = self.operator)
+		#print(self.is_terminal())
+		if not self.is_terminal():
+			for child_index, child in enumerate(self.children):
+				copy_child = child.copy(parent=the_copy)
+				the_copy.add_child(name=self.children_names[child_index], child=copy_child)
+				
 		return the_copy
 		
 	def __eq__(self,other):
-		return self.attribute.name == other.attribute.name and self.operator == other.operator and self.value == other.value
+		return self.attribute.name == other.attribute.name and self.operator == other.operator and self.comparable_value == other.comparable_value
 
 	def __str__(self):
 			if self.attribute is None:
-				return "Node: none attrobute, op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",ol:" + str(self.output_label) + ",n_children:" + str(len(self.children))
+				return "Node: terminal, op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",ol:" + str(self.output_label) + ",n_children:" + str(len(self.children))
 			else:
 				return "Node:" + self.attribute.name + ",op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",ol:" + str(self.output_label) + ",n_children:" + str(len(self.children))
 
@@ -255,9 +276,41 @@ class DecisionTree_EA: #oblique, binary trees
 	def one_point_crossover(self,
 			individual1,
 			individual2):
-		pass
-	
-	#def 
+		print("individual1",individual1)
+		print("individual1",individual2)
+		copy1 = individual1.copy()
+		copy2 = individual2.copy()
+		print("copy1",copy1)
+		print("copy2",copy2)
+		nodes1 = copy1.get_subtree_nodes(include_self = False)
+		nodes2 = copy2.get_subtree_nodes(include_self = False)
+		print("len(nodes1)",len(nodes1))
+		print("len(nodes2)",len(nodes2))
+
+		node1 = rd.choice(nodes1)
+		node2 = rd.choice(nodes2)
+		print(node1)
+		print(node2)
+		
+		nodes1 = node1.get_subtree_nodes(include_self = False)
+		nodes2 = node2.get_subtree_nodes(include_self = False)
+		print("len(nodes1)",len(nodes1))
+		print("len(nodes2)",len(nodes2))
+		
+		print("parent before")
+		print(node1.parent)
+		print(node2.parent)
+		
+		temp = node1.parent
+		node1.parent = node2.parent
+		node2.parent = temp
+		
+		print("parent after")
+		print(node1.parent)
+		print(node2.parent)
+		
+		return copy1, copy2
+
 		
 	def evaluate_tree(self,root_node,provisional_data=None):
 		pass
@@ -276,7 +329,6 @@ class DecisionTree_EA: #oblique, binary trees
 			if output == self.output_labels[index]:
 				corrects += 1
 		return corrects/len(data.index)
-
 			
 	def adapt_to_data(self, labels, data):
 		self.data = pd.DataFrame(data)
@@ -287,7 +339,6 @@ class DecisionTree_EA: #oblique, binary trees
 		self.unique_output_labels = set(list(labels))
 		self.dataset = data
 		print("unique_output_labels",self.unique_output_labels)
-		
 	
 	def parse_tree_r(self, tree):
 		pd_tree = pd.DataFrame(tree)
