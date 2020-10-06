@@ -123,13 +123,30 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
 # a<-Classifier(default_data,1,500)
 # rpart.plot(a$Trees[[500]])
 
+
+
 #interpretation
+C<-Classifier(default_data,1,500)
+
 rules_r <- tidyRules(fit.r)
 print(rules_r)
 print(rules_r[2])
 
-
 use_python("C:/Users/fredx/Anaconda3",required=T)
 source_python("Source_EA.py")
-C = DecisionTree_EA()
-tree_from_r(rules_r)
+PDT <- DecisionTree_EA()
+PDT$'adapt_to_data'(labels = GermanCredit$Class, data=GermanCredit)
+tree <- PDT$'parse_tree_r'(rules_r)
+#tree$'evaluate'(GermanCredit[2,])
+porc <- PDT$'evaluate_tree'(tree)
+porc  
+PDT$'one_point_crossover'(tree,tree)
+
+sample_tree <- list()
+sample_tree[[1]] <- c("Duration",">","11")
+sample_tree[[2]] <- c("Amount","<=","900") 
+sample_tree[[3]] <- c("Age",">","21") 
+sample_tree[[4]] <- c("Duration",">","22") 
+sample_tree[[5]] <- c("Amount",">","11") 
+sample_tree[[6]] <- c("Account.withus","<=","0.5") 
+sample_tree[[7]] <- c("Account.for_car",">","0.5") 
