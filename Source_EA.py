@@ -60,13 +60,13 @@ class Objective:
 	def set_worst_known_value(value):
 		self.worst_known_value = value
 		
-class Individual:
+class Individual: #missing __lt__ and __eq__
 	def __init__(
 			self,
 			generation_of_creation,
 			genotype, 
 			phenotype = None,
-			objective_values = None,
+			objective_values = [0],
 			n_dominators = None,                 #used in MOEA, pareto dominance
 			n_dominated_solutions = None,        #used in MOEA, pareto dominance
 			dominated_solutions = None,          #used in NSGA-II
@@ -82,8 +82,6 @@ class Individual:
 		self.objective_values = objective_values
 		self.local_crowding_distance = local_crowding_distance
 		self.non_domination_rank = non_domination_rank
-		
-		self.n_objectives = len(objective_values)
 		
 class Attribute:
 	def __init__(self,
@@ -109,6 +107,9 @@ class Attribute:
 	
 class DT_Node:
 	def __init__(self, parent = None):
+		"""
+		children are sorted: the first one is the true, the second one is the false
+		"""
 		self.updated=False
 		self.parent=parent
 		self.children = []
@@ -126,13 +127,25 @@ class DT_Node:
 		self.comparable_value_index = comparable_value_index
 		self.operator = operator
 	
-	def add_child(self,name,child=None):
-		if child is None:
-			child = DT_Node(parent=self)
-		self.children = self.children + [child]
-		self.children_names = self.children_names + [name]
-		print("Added child named ", name , ",new child count", str(len(self.children)))
+	def add_child(self,name,child,index=None):
+		child.parent = self
+		if index is None:
+			self.children = self.children + [child]
+			self.children_names = self.children_names + [name]
+		else:
+			self.children[index] = child
+			self.children_names[index] = name
+		#print("Added child named ", name , ",new child count", str(len(self.children)))
 		return child
+		
+	def add_new_child(self, name):
+		empty_node = DT_Node()
+		child = self.add_child(name=name,child=empty_node, index = None)
+		return child
+	
+	def replace_child(self, new_child, old_child):
+		index = self.children.index(old_child)
+		self.add_child(name = self.children_names[index], child = new_child, index = index)
 	
 	def evaluate(self,data_row):
 		#print("Evaluating node", self)
@@ -175,7 +188,7 @@ class DT_Node:
 	def is_root(self):
 		return self.parent is None
 
-	def get_subtree_nodes(self, include_self = True):
+	def get_subtree_nodes(self, include_self = True, include_terminals = True):
 		"""
 		Returns a list with all the nodes of the subtree with this node as the root node, including himself
 		"""
@@ -225,10 +238,7 @@ class DT_Node:
 				the_copy.add_child(name=self.children_names[child_index], child=copy_child)
 				
 		return the_copy
-		
-	def __eq__(self,other):
-		return self.attribute.name == other.attribute.name and self.operator == other.operator and self.comparable_value == other.comparable_value
-
+	
 	def __str__(self):
 			if self.attribute is None:
 				return "Node: terminal, op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",ol:" + str(self.output_label) + ",n_children:" + str(len(self.children))
@@ -236,20 +246,27 @@ class DT_Node:
 				return "Node:" + self.attribute.name + ",op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",ol:" + str(self.output_label) + ",n_children:" + str(len(self.children))
 
 class DecisionTree_EA: #oblique, binary trees
-	def __init__(self):
+	def __init__(self, tournament_size = 3, crossover_rate = 0.8, mutation_rate = 0, elitism_rate = 0.2):
 			
 		self.output_labels = []
+		self.current_generation = 0
 		self.unique_output_labels = []
 		self.attributes = {}
 		self.operators = []
-		self.objectives = {}
+		#self.objectives = {}
 		self.n_objectives = 0
 		self.generation = 0
 		self.population = []
 		self.parsing_operators = []
 		self.operators_db = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
 		self.inverse_operators = {op.lt:op.ge,op.le:op.gt,op.gt:op.le,op.ge:op.lt,op.eq:op.ne}
+		self.tournament_size = tournament_size
 		print("Called class DecisionTree_EA")
+		self.archive_population = []
+		self.hall_of_fame = []
+		self.crossover_rate = crossover_rate
+		self.mutation_rate = mutation_rate
+		self.elitism_rate = elitism_rate
 										
 	def add_operator(self,operator): #operators with compatibility to certain attributes?
 		if operator not in self.operators:
@@ -272,23 +289,28 @@ class DecisionTree_EA: #oblique, binary trees
 	def attribute_value_mutation(self,
 			individual):
 		pass
-			
-	def one_point_crossover(self,
-			individual1,
-			individual2):
-		print("individual1",individual1)
-		print("individual1",individual2)
-		copy1 = individual1.copy()
-		copy2 = individual2.copy()
-		print("copy1",copy1)
-		print("copy2",copy2)
-		nodes1 = copy1.get_subtree_nodes(include_self = False)
+		
+	def swap_child(node1,new_parent,old_child,new_child):
+		pass
+	
+	def one_point_crossover(self, individual1, individual2):
+		tree1 = individual1.genotype
+		tree2 = individual2.genotype
+		#print("individual1",individual1)
+		#print("individual1",individual2)
+		copy1 = tree1.copy()
+		copy2 = tree2.copy()
+		
+		#print("copy1",copy1)
+		#print("copy2",copy2)
+		nodes1 = copy1.get_subtree_nodes(include_self = False) #no root node included
 		nodes2 = copy2.get_subtree_nodes(include_self = False)
-		print("len(nodes1)",len(nodes1))
-		print("len(nodes2)",len(nodes2))
-
+		#print("len(nodes1)",len(nodes1))
+		#print("len(nodes2)",len(nodes2))
+		
 		node1 = rd.choice(nodes1)
 		node2 = rd.choice(nodes2)
+		"""
 		print(node1)
 		print(node2)
 		
@@ -300,37 +322,97 @@ class DecisionTree_EA: #oblique, binary trees
 		print("parent before")
 		print(node1.parent)
 		print(node2.parent)
-		
-		temp = node1.parent
-		node1.parent = node2.parent
-		node2.parent = temp
-		
+		"""
+		temp1 = node1.copy()
+		temp2 = node2.copy()
+		node1.parent.replace_child(new_child=temp2, old_child=node1)
+		node2.parent.replace_child(new_child=temp1, old_child=node2)
+		"""
 		print("parent after")
+		print(temp1.parent)
+		print(temp2.parent)
 		print(node1.parent)
 		print(node2.parent)
 		
-		return copy1, copy2
-
+		nodes1 = copy1.get_subtree_nodes(include_self = False)
+		nodes2 = copy2.get_subtree_nodes(include_self = False)
+		print("len(nodes1)",len(nodes1))
+		print("len(nodes2)",len(nodes2))
+		"""
+		new_individual1 = Individual(generation_of_creation = self.generation, genotype = copy1)
+		new_individual2 = Individual(generation_of_creation = self.generation, genotype = copy2)
+		"""
+		print("copy1",copy1)
+		print("copy1.c0",copy1.children[0])
+		print("copy1.c1",copy1.children[1])
+		print("copy2",copy2)
+		print("copy2.c0",copy2.children[0])
+		print("copy2.c1",copy2.children[1])
+		"""
+		return [new_individual1, new_individual2]
+		
+	def mutate(self, individual):#missing
+		return individual
+		
+	def evolve(self, generations = 1): #unfinished, also missing verification of existent nodes
+		for i_gen in range(int(generations)):
+			self.evaluate_population()
+			pop_size = len(self.population)
+			crossovers = int(pop_size * self.crossover_rate / 2)
+			mutations = int(pop_size * self.mutation_rate)
+			elites = int(pop_size * self.elitism_rate)
+			newgen_pop = []
+			for i in range(crossovers):
+				parent1 = self.tournament_selection()
+				parent2 = self.tournament_selection()
+				newgen_pop.extend(self.one_point_crossover(parent1, parent2))
+			for i in range(mutations):
+				parent = self.tournament_selection()
+				newgen_pop.append(self.mutate(parent))
+			sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0])
+			print("Gen ", str(self.generation), "Best so far:", str(sorted_competitors[0].objective_values[0]))
+			if elites > 0: #missing hall of fame
+				newgen_pop.extend(sorted_competitors[:elites])
+			self.population = newgen_pop
+			self.generation = self.generation + 1
+		self.evaluate_population()
+		sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0])
+		print("Gen ", + str(self.generation) + "Best so far:", sorted_competitors[0].objective_values[0])
+		return sorted_competitors[0]
+	
+	def tournament_selection(self): #population could be sorted before to avoid repetition
+		competitors = rd.sample(self.population, self.tournament_size)
+		sorted_competitors = sorted(competitors, key=lambda ind: ind.objective_values[0])
+		winner = sorted_competitors[0]
+		return winner
 		
 	def evaluate_tree(self,root_node,provisional_data=None):
-		pass
-		
 		if provisional_data is None:
 			data = self.data
 		else:
 			data = provisional_data
 		output_array = []
-		corrects = 0
 		for index, row in data.iterrows():
-			#if index in [i for i in range(13)]:
-			#print("in row index", index)
-			#print(row)
-			output = root_node.evaluate(row)
-			if output == self.output_labels[index]:
-				corrects += 1
-		return corrects/len(data.index)
+			output_array.append(root_node.evaluate(row))
+		return output_array
+	
+	def calculate_accuracy(self, model_output_labels):
+		corrects = 0
+		for i,label in enumerate(self.output_labels):
+			if label == model_output_labels[i]:
+				corrects = corrects + 1
+		accuracy = corrects / (i+1)
+		return accuracy
+				
+	def evaluate_population(self):
+		#get individual objective values:
+		for ind in self.population:
+			labels = self.evaluate_tree(ind.genotype)
+			accuracy = self.calculate_accuracy(model_output_labels=labels)
+			#print(accuracy)
+			ind.objective_values[0] = accuracy
 			
-	def adapt_to_data(self, labels, data):
+	def adapt_to_data(self, labels, data): #missing test_data
 		self.data = pd.DataFrame(data)
 		for i, attribute in enumerate(self.data.columns):
 			self.attributes[attribute] = Attribute(index=i, name=attribute)
@@ -339,6 +421,12 @@ class DecisionTree_EA: #oblique, binary trees
 		self.unique_output_labels = set(list(labels))
 		self.dataset = data
 		print("unique_output_labels",self.unique_output_labels)
+	
+	def insert_r_tree_to_population(self, tree):
+		parsed_tree = self.parse_tree_r(tree)
+		individual = Individual(generation_of_creation = self.current_generation,
+								genotype = parsed_tree)
+		self.population.append(individual)
 	
 	def parse_tree_r(self, tree):
 		pd_tree = pd.DataFrame(tree)
@@ -370,7 +458,7 @@ class DecisionTree_EA: #oblique, binary trees
 									comparable_value_index=comparable_value_index,
 									comparable_value=comparable_value,
 									operator=operator)
-					child = node.add_child(name=comparison)
+					child = node.add_new_child(name=comparison)
 				#if n_comparisons == comp_idx:
 				node = child
 			#print("labels[rule_index]",labels[rule_index])
