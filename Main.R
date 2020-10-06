@@ -117,7 +117,8 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
   
   res<-unlist(res, use.names=FALSE)
   
-  return(list(Data=dim(default_data), Trees=Forest,Performance=res))
+  #return(list(Data=dim(default_data), Trees=Forest,Performance=res))
+  return(list(Data=default_data, Trees=Forest,Performance=res)) #Added by Fred
 }
 
 # a<-Classifier(default_data,1,500)
@@ -126,21 +127,25 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
 
 
 #interpretation
-C<-Classifier(default_data,1,500)
-
-rules_r <- tidyRules(fit.r)
-print(rules_r)
-print(rules_r[2])
-
+C<-Classifier(default_data,1,20)
 use_python("C:/Users/fredx/Anaconda3",required=T)
+
+
 source_python("Source_EA.py")
 PDT <- DecisionTree_EA()
-PDT$'adapt_to_data'(labels = GermanCredit$Class, data=GermanCredit)
-tree <- PDT$'parse_tree_r'(rules_r)
-#tree$'evaluate'(GermanCredit[2,])
-porc <- PDT$'evaluate_tree'(tree)
-porc  
-PDT$'one_point_crossover'(tree,tree)
+PDT$'adapt_to_data'(labels = C$Data$Class, data=C$Data)
+#PDT$'initial_population_from_r'(C$Trees)
+for (Ctree in C$Trees) {
+  rules <- tidyRules(Ctree)
+  PDT$'insert_r_tree_to_population'(rules)
+}
+PDT$'evaluate_population'()
+t1 = PDT$'tournament_selection'()
+t1
+t2 = PDT$'tournament_selection'()
+t2
+PDT$'one_point_crossover'(t1,t2)
+PDT$evolve(30)
 
 sample_tree <- list()
 sample_tree[[1]] <- c("Duration",">","11")
