@@ -145,7 +145,7 @@ t1
 t2 = PDT$'tournament_selection'()
 t2
 PDT$'one_point_crossover'(t1,t2)
-PDT$evolve(30)
+PDT$evolve(5)
 
 sample_tree <- list()
 sample_tree[[1]] <- c("Duration",">","11")
