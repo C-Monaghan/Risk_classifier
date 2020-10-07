@@ -52,6 +52,17 @@ output$values <- renderTable({
   isolate(sliderValues())
 })
 
+observeEvent(input$button, {
+  # Show a modal when the button is pressed
+  shinyalert("calculating.....please wait", type = "info",showConfirmButton = TRUE,
+             showCancelButton = TRUE,
+             confirmButtonText = "OK",
+             cancelButtonText = "Cancel",callbackR = function(x) {
+               global$response <- x
+             }
+  )
+})
+
 })
 
 
