@@ -161,6 +161,7 @@ class DT_Node:
 			try:
 				comparison = self.operator(data_row.iloc[self.attribute.index],self.comparable_value)
 			except:
+
 				#print("Error in evaluation") #Many errors still
 				#print("node",str(self))
 				#print("data_row:\n",data_row)
@@ -169,6 +170,7 @@ class DT_Node:
 				#print("attribute index",self.attribute.index)
 				#print("operator",str(self.operator))
 				#print("comparable_value",str(self.comparable_value))
+
 				return None
 			
 			if comparison == True:
@@ -222,7 +224,9 @@ class DT_Node:
 			else:
 				return parent.node_already_in_branch(node=node)
 
+
 	def copy(self, parent=None): #missing test: evaluate the copy
+
 		"""
 		Don't give arguments. Returns an unrelated new item with the same characteristics
 		"""
@@ -369,23 +373,29 @@ class DecisionTree_EA: #oblique, binary trees
 			for i in range(mutations):
 				parent = self.tournament_selection()
 				newgen_pop.append(self.mutate(parent))
+
 			sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
 			
 			print("Gen ", str(self.generation), "Best so far:", str(sorted_competitors[0].objective_values[0]),str(sorted_competitors[1].objective_values[0]))
 			for i in range(10):
 				print(str(sorted_competitors[i].objective_values[0]))
+
 			if elites > 0: #missing hall of fame
 				newgen_pop.extend(sorted_competitors[:elites])
 			self.population = newgen_pop
 			self.generation = self.generation + 1
 		self.evaluate_population()
+
 		sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
 		print("Gen ", str(self.generation), "Best so far:", sorted_competitors[0].objective_values[0])
+
 		return sorted_competitors[0]
 	
 	def tournament_selection(self): #population could be sorted before to avoid repetition
 		competitors = rd.sample(self.population, self.tournament_size)
+
 		sorted_competitors = sorted(competitors, key=lambda ind: ind.objective_values[0], reverse = True)
+
 		winner = sorted_competitors[0]
 		return winner
 		
@@ -413,8 +423,10 @@ class DecisionTree_EA: #oblique, binary trees
 			labels = self.evaluate_tree(ind.genotype)
 			accuracy = self.calculate_accuracy(model_output_labels=labels)
 			#print(accuracy)
+
 			ind.objective_values = [accuracy]
 			#ind.objective_values[0] = accuracy how come this didn´t work
+
 			
 	def adapt_to_data(self, labels, data): #missing test_data
 		self.data = pd.DataFrame(data)
