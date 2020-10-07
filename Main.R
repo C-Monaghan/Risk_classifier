@@ -19,14 +19,12 @@ GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
 default_data <- GermanCredit
 
 # The main function
-Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
+Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   
   # Cleaning the data before using
   default_data<-na.omit(default_data)
   x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
   y=default_data[,1]
-  
-  set.seed(1)
   
   ###################### Applying regressions
 
@@ -72,6 +70,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
   else {
     return(default_data)
   }
+  
   ###################### Decision tree
   
   # You get the names of the columns
@@ -79,33 +78,39 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
   
-  
   # You construct all possible combinations
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
                 recursive=FALSE)
-  id<-sample(id, selection, replace=FALSE)
+  id<-sample(id, selection, replace=FALSE) 
   
   # You paste them to formulas
   Formulas <- sapply(id,function(i)
     paste("Class~",paste(Cols[i],collapse="+")))
   
+  ## 75% of the sample size
+  smp_size <- floor(0.75 * nrow(default_data))
+  
+  ## set the seed to make your partition reproducible
+  set.seed(1)
+  train_ind <- sample(seq_len(nrow(default_data)), size = smp_size)
+  
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:selection) {
-    RPI = rpart(Formulas[[i]],data=default_data,method = "class")
+    RPI = rpart(Formulas[[i]],data= default_data[train_ind, ],method = "class")
     Forest[[i]] = RPI
   }
   
   #~~~~~~~~  TESTING PERFORMANCE
   pred = list()
   for(i in 1:selection) {
-    RPI<-predict(Forest[i],type="class")
-    pred[[i]] = RPI
+    RP<-predict(Forest[i],type="class",newdata=default_data[-train_ind, ])
+    pred[[i]] = RP
   }
   
   tab= list()
   for(i in 1:selection) {
-    RP<-table(default_data[,1],pred[[i]][[1]])
+    RP<-table(default_data[-train_ind,1],pred[[i]][[1]])
     tab[[i]] = RP
   }
   
@@ -117,15 +122,16 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
   
   res<-unlist(res, use.names=FALSE)
   
-  return(list(Data=default_data, Trees=Forest,Performance=res)) 
+  return(list(Data=default_data, Trees=Forest,Accuracy=res)) 
 }
 
-# a<-Classifier(default_data,1,500)
-# rpart.plot(a$Trees[[500]])
+
+a<-Classifier(default_data,1,200)
+rpart.plot(a$Trees[[500]])
+summary(a$Accuracy)
 
 
-
-#interpretation
+# Interpretation
 C<-Classifier(default_data,1,20)
 use_python("C:/Users/fredx/Anaconda3",required=T)
 
