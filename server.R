@@ -1,15 +1,8 @@
-# Adding function file
-source("Main.R")
-
 # Library for running shinyapp
 library(shiny)
 
 # Library for using python scripts in shiny
 library(reticulate)
-
-default_data <- load("GermanCredit.Rdata")
-default_data<-default_data[,c(10,1:9,11:62)]
-
 
 # use_python("/Users/sajalkaurminhas/Documents/PhD/Group Project/Risk_classifier",required=T)
 # source_python("Source_EA.py")

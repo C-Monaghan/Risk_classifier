@@ -117,8 +117,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000) {
   
   res<-unlist(res, use.names=FALSE)
   
-  #return(list(Data=dim(default_data), Trees=Forest,Performance=res))
-  return(list(Data=default_data, Trees=Forest,Performance=res)) #Added by Fred
+  return(list(Data=default_data, Trees=Forest,Performance=res)) 
 }
 
 # a<-Classifier(default_data,1,500)

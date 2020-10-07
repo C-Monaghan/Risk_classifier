@@ -88,8 +88,7 @@ shinyUI(ui = tagList(
     tabPanel("Classifier", "This panel is intentionally left blank",
              
              selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
-             verbatimTextOutput("summary"),
-             tableOutput("table")
+             
     ),
     
     
@@ -98,8 +97,7 @@ shinyUI(ui = tagList(
     tabPanel("About Us", "This panel is intentionally left blank",
              
              selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
-             verbatimTextOutput("summary"),
-             tableOutput("table")
+             
              
     )
     
