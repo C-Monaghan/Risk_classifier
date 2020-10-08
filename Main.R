@@ -150,16 +150,16 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   }
   
   # Accuracy of the treess
-  res= list()
+  acc= list()
   for(i in 1:selection) {
     RP<-sum(diag(tab[[i]]))/sum(tab[[i]])
-    res[[i]] = RP
+    acc[[i]] = RP
   }
   
   # Unlisting the trees
-  res<-unlist(res, use.names=FALSE)
+  acc<-unlist(acc, use.names=FALSE)
   
-  return(list(Reduced_data=default_data, Trees=Forest, Accuracy=res, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
+  return(list(Reduced_data=default_data, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
 
 
