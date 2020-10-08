@@ -173,6 +173,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
 # a$AUROC[[1]]
 # a$Model_Performance[[1]]
 # colnames(a$Reduced_data)
+#summary(a$AUROC)
 
 # Interpretation
 C<-Classifier(default_data,1,20)
@@ -181,7 +182,7 @@ use_python("C:/Users/fredx/Anaconda3",required=T)
 
 source_python("Source_EA.py")
 PDT <- DecisionTree_EA()
-PDT$'adapt_to_data'(labels = C$Data$Class, data=C$Data)
+PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
 #PDT$'initial_population_from_r'(C$Trees)
 for (Ctree in C$Trees) {
   rules <- tidyRules(Ctree)
