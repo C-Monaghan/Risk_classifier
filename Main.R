@@ -158,6 +158,8 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   
   # Unlisting the trees
   acc<-unlist(acc, use.names=FALSE)
+  forest_Gini<-unlist(forest_Gini, use.names=FALSE)
+  forest_AUROC<-unlist(forest_AUROC, use.names=FALSE)
   
   return(list(Reduced_data=default_data, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
