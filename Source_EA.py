@@ -502,3 +502,51 @@ class DecisionTree_EA: #oblique, binary trees
 		comparable_value_index = add_crucial_value(attribute,comparable_value)
 		
 		return attribute, operator, comparable_value, comparable_value_index
+		
+		
+"""
+#interpretation
+C<-Classifier(default_data,1,100)
+use_python("C:/Users/fredx/Anaconda3",required=T)
+
+
+source_python("Source_EA.py")
+#Creates the Python class
+PDT <- DecisionTree_EA(tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3)
+#Gives the data to python, python can relate now to the attributes and output_labels
+PDT$'adapt_to_data'(labels = C$Data$Class, data=C$Data)
+#Initialisation of the population with trees from R:
+for (Ctree in C$Trees) {
+  rules <- tidyRules(Ctree)
+  PDT$'insert_r_tree_to_population'(rules)
+}
+#Logs: print the poll of crucial values for each attribute
+for (att in PDT$'attributes'){
+  print(att$'name')
+  print(att$'crucial_values')
+}
+#Genetic operators test
+PDT$'evaluate_population'()
+ind1 = PDT$'tournament_selection'()
+print(ind1$'genotype')
+ind2 = PDT$'tournament_selection'()
+print(ind2$'genotype')
+crossovers = PDT$'one_point_crossover'(ind1,ind2)
+t3 = ind2$'genotype'$'copy'()
+print(t3)
+ind4 = PDT$'mutate'(ind1)
+print(ind4$'genotype')
+ev_t1 = PDT$'evaluate_tree'(ind1$'genotype')
+print(ev_t1)
+ev_t2 = PDT$'evaluate_tree'(ind2$'genotype')
+print(ev_t2)
+ev_t3 = PDT$'evaluate_tree'(t3)
+print(ev_t3)
+ev_t4 = PDT$'evaluate_tree'(ind4$'genotype')
+print(ev_t4)
+#print(ind4$'genotype'$'visits_count')
+
+#Evolution
+winner <- PDT$evolve(30)
+print(winner$'genotype')
+"""
