@@ -12,6 +12,7 @@ library("tidyrules")
 library("dplyr")
 library("pander")
 library(caret)
+library(ROCR)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
@@ -77,6 +78,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   Cols <- names(default_data)
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
+  selection=1000
   
   # You construct all possible combinations
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
@@ -102,34 +104,73 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   }
   
   #~~~~~~~~  TESTING PERFORMANCE
+  
+  # Predicting the performance of the trees
   pred = list()
   for(i in 1:selection) {
     RP<-predict(Forest[i],type="class",newdata=default_data[-train_ind, ])
     pred[[i]] = RP
   }
   
+  prob = list()
+  for(i in 1:selection) {
+    RP<-predict(Forest[i],type="prob",newdata=default_data[-train_ind, ])
+    prob[[i]] = RP
+  }
+  
+  forest_pred = list()
+  for(i in 1:selection) {
+    RP<-prediction(prob[[i]][[1]][,2],default_data[-train_ind, ][,1])
+    forest_pred[[i]] = RP
+  }
+  
+  forest_perf = list()
+  for(i in 1:selection) {
+    RP<-performance(forest_pred[[i]],"tpr","fpr")
+    forest_perf[[i]] = RP
+  }
+  
+  forest_AUROC = list()
+  for(i in 1:selection) {
+    RP <- round(performance(forest_pred[[i]], measure = "auc")@y.values[[1]]*100, 2)
+  forest_AUROC[[i]] = RP
+  }
+  
+  forest_Gini = list()
+  for(i in 1:selection) {
+    RP<- (2*forest_AUROC[[i]] - 100)
+  forest_Gini[[i]] = RP
+  }
+  
+  # Making the table of the performance of the trees
   tab= list()
   for(i in 1:selection) {
     RP<-table(default_data[-train_ind,1],pred[[i]][[1]])
     tab[[i]] = RP
   }
   
+  # Accuracy of the treess
   res= list()
   for(i in 1:selection) {
     RP<-sum(diag(tab[[i]]))/sum(tab[[i]])
     res[[i]] = RP
   }
   
+  # Unlisting the trees
   res<-unlist(res, use.names=FALSE)
   
-  return(list(Data=default_data, Trees=Forest,Accuracy=res)) 
+  return(list(Reduced_data=default_data, Trees=Forest, Accuracy=res, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
 
 
-a<-Classifier(default_data,1,200)
-rpart.plot(a$Trees[[500]])
-summary(a$Accuracy)
 
+# a<-Classifier(default_data,1,200)
+# rpart.plot(a$Trees[[1]])
+# a$Accuracy[1]
+# a$Gini_Index[[1]]
+# a$AUROC[[1]]
+# a$Model_Performance[[1]]
+# colnames(a$Reduced_data)
 
 # Interpretation
 C<-Classifier(default_data,1,20)
