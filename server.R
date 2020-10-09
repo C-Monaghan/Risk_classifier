@@ -4,6 +4,11 @@ library(shiny)
 # Library for using python scripts in shiny
 library(reticulate)
 
+# Loading the dataset
+load("GermanCredit.Rdata")
+GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
+default_data <- GermanCredit
+
 # use_python("/Users/sajalkaurminhas/Documents/PhD/Group Project/Risk_classifier",required=T)
 # source_python("Source_EA.py")
 # x <- func()
@@ -21,7 +26,7 @@ shinyServer(function(input, output, session) {
   sliderValues <- reactive({
     
     data.frame(
-      Name = c("Variable section method",
+      Name = c("Variable selection method",
                "No. of Decision Trees"),
       Value = as.character(c(input$method,
                              input$trees)),
@@ -39,18 +44,31 @@ shinyServer(function(input, output, session) {
  
 global <- reactiveValues(response = FALSE)
  
-Main<-function(){
-   if(global$response==T){
-    classifier(default_data,  method(),trees())
-   }
-   else return(NULL)
-}
-
 # Show the values in an HTML table ----
 output$values <- renderTable({
   input$button
   isolate(sliderValues())
 })
+
+# Show the values in an HTML table ----
+output$dataset <- renderDataTable({
+  default_data
+}, options = list(pageLength=10), escape = FALSE)
+
+
+Main<-function(){
+  if(global$response==T){
+    classifier(default_data,  method(),trees())
+  }
+  else return(NULL)
+}
+
+# Show the values in an HTML table ----
+output$Reduced_data <- renderDataTable({
+  Main()$Reduced_data
+}, options = list(pageLength=10), escape = FALSE)
+
+
 
 observeEvent(input$button, {
   # Show a modal when the button is pressed
