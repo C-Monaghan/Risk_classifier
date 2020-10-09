@@ -13,6 +13,8 @@ library("dplyr")
 library("pander")
 library(caret)
 library(ROCR)
+library(tidyrules)
+require(caTools)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
@@ -89,17 +91,20 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   Formulas <- sapply(id,function(i)
     paste("Class~",paste(Cols[i],collapse="+")))
   
-  ## 75% of the sample size
-  smp_size <- floor(0.75 * nrow(default_data))
+  #~~~~~~~~ Dividing the data into testing and training
   
   ## set the seed to make your partition reproducible
-  set.seed(1)
-  train_ind <- sample(seq_len(nrow(default_data)), size = smp_size)
+  set.seed(1) 
+  
+  ## 75% of the sample size
+  sample = sample.split(default_data$Class, SplitRatio = .70)
+  train = subset(default_data, sample == TRUE)
+  test  = subset(default_data, sample == FALSE)
   
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:selection) {
-    RPI = rpart(Formulas[[i]],data= default_data[train_ind, ],method = "class")
+    RPI = rpart(Formulas[[i]],data= train,method = "class")
     Forest[[i]] = RPI
   }
   
@@ -108,19 +113,19 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   # Predicting the performance of the trees
   pred = list()
   for(i in 1:selection) {
-    RP<-predict(Forest[i],type="class",newdata=default_data[-train_ind, ])
+    RP<-predict(Forest[i],type="class",newdata=test)
     pred[[i]] = RP
   }
   
   prob = list()
-  for(i in 1:selection) {
-    RP<-predict(Forest[i],type="prob",newdata=default_data[-train_ind, ])
+  for(i in 1:selection){
+    RP<-predict(Forest[i],type="prob",newdata=test)
     prob[[i]] = RP
   }
   
   forest_pred = list()
   for(i in 1:selection) {
-    RP<-prediction(prob[[i]][[1]][,2],default_data[-train_ind, ][,1])
+    RP<-prediction(prob[[i]][[1]][,2],test[,1])
     forest_pred[[i]] = RP
   }
   
@@ -145,7 +150,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   # Making the table of the performance of the trees
   tab= list()
   for(i in 1:selection) {
-    RP<-table(default_data[-train_ind,1],pred[[i]][[1]])
+    RP<-table(test[,1],pred[[i]][[1]])
     tab[[i]] = RP
   }
   
@@ -161,7 +166,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   forest_Gini<-unlist(forest_Gini, use.names=FALSE)
   forest_AUROC<-unlist(forest_AUROC, use.names=FALSE)
   
-  return(list(Reduced_data=default_data, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
+  return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
 
 
@@ -174,11 +179,15 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
 # a$Model_Performance[[1]]
 # colnames(a$Reduced_data)
 #summary(a$AUROC)
+# summary(a$Gini_Index)
 
 # Interpretation
 C<-Classifier(default_data,1,20)
 use_python("C:/Users/fredx/Anaconda3",required=T)
 
+for (Ctree in unlist(C$Trees)) {
+  rules <- tidyRules(unlist(C$Trees))
+}
 
 source_python("Source_EA.py")
 PDT <- DecisionTree_EA()

@@ -70,7 +70,7 @@ shinyUI(ui = tagList(
                                   
                                       
                                       # Input: No. of Decision Trees ----
-                                      sliderInput("trees", "How many Decision Trees user wants?",
+                                      sliderInput("trees", "How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                  min = 10, max=1000,
                                                  step = 1,animate = TRUE,value = 100)
                                       
@@ -79,13 +79,17 @@ shinyUI(ui = tagList(
     mainPanel(
       tabsetPanel(
         type="tab",
-        tabPanel("Dataset description",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate"))
-       )
+        tabPanel(" View Input Dataset ",dataTableOutput("dataset")),
+        tabPanel("User Selection Input",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
+        tabPanel("Reduced Dataset after variable selection"),
+                 #,dataTableOutput("Reduced_data")),
+        tabPanel("Classifier")
       )
+       )
     ),
     
     # Classifier (Analysis) ----------------------------------------------------------------
-    tabPanel("Classifier", "This panel is intentionally left blank",
+    tabPanel("Evolutionary Algorithm", "This panel is intentionally left blank",
              
              selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
              
