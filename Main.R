@@ -20,7 +20,7 @@ GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
 default_data <- GermanCredit
 
 # The main function
-Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
+Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   # Cleaning the data before using
   default_data<-na.omit(default_data)
@@ -28,7 +28,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   y=default_data[,1]
   
   ###################### Applying regressions
-
+  
   if (choose_regression==0) {
     
     # ~~~~~ Ridge Regression
@@ -40,18 +40,18 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
     # Reduced dataset
     default_data<-as.data.frame(x[, tmp_coef_ridge@i[-1]])
   }
-   else {
-     
-     # ~~~~~ Lasso Regression
-     cv.out_lasso=cv.glmnet(x,y,alpha=1,family = "binomial")
-     bestlam_lasso=cv.out_lasso$lambda.min
-     tmp_coef_lasso = coef(cv.out_lasso,s=bestlam_lasso)
-     tmp_coef_lasso[tmp_coef_lasso!=0]
-     
-     # Reduced dataset
-     default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
-   }
-
+  else {
+    
+    # ~~~~~ Lasso Regression
+    cv.out_lasso=cv.glmnet(x,y,alpha=1,family = "binomial")
+    bestlam_lasso=cv.out_lasso$lambda.min
+    tmp_coef_lasso = coef(cv.out_lasso,s=bestlam_lasso)
+    tmp_coef_lasso[tmp_coef_lasso!=0]
+    
+    # Reduced dataset
+    default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
+  }
+  
   if (ncol(default_data)>25) {
     # Fit the full model 
     default_data<-data.frame(Class=y,default_data)
@@ -133,13 +133,13 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   forest_AUROC = list()
   for(i in 1:selection) {
     RP <- round(performance(forest_pred[[i]], measure = "auc")@y.values[[1]]*100, 2)
-  forest_AUROC[[i]] = RP
+    forest_AUROC[[i]] = RP
   }
   
   forest_Gini = list()
   for(i in 1:selection) {
     RP<- (2*forest_AUROC[[i]] - 100)
-  forest_Gini[[i]] = RP
+    forest_Gini[[i]] = RP
   }
   
   # Making the table of the performance of the trees
@@ -175,32 +175,47 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
 # colnames(a$Reduced_data)
 #summary(a$AUROC)
 
-# Interpretation
-C<-Classifier(default_data,1,20)
+#interpretation
+C<-Classifier(default_data,1,100)
 use_python("C:/Users/fredx/Anaconda3",required=T)
 
 
 source_python("Source_EA.py")
-PDT <- DecisionTree_EA()
+#Creates the Python class
+PDT <- DecisionTree_EA(tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3)
+#Gives the data to python, python can relate now to the attributes and output_labels
 PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
-#PDT$'initial_population_from_r'(C$Trees)
+#Initialisation of the population with trees from R:
 for (Ctree in C$Trees) {
   rules <- tidyRules(Ctree)
   PDT$'insert_r_tree_to_population'(rules)
 }
+#Logs: print the poll of crucial values for each attribute
+for (att in PDT$'attributes'){
+  print(att$'name')
+  print(att$'crucial_values')
+}
+#Genetic operators test
 PDT$'evaluate_population'()
-t1 = PDT$'tournament_selection'()
-t1
-t2 = PDT$'tournament_selection'()
-t2
-PDT$'one_point_crossover'(t1,t2)
-PDT$evolve(5)
+ind1 = PDT$'tournament_selection'()
+print(ind1$'genotype')
+ind2 = PDT$'tournament_selection'()
+print(ind2$'genotype')
+crossovers = PDT$'one_point_crossover'(ind1,ind2)
+t3 = ind2$'genotype'$'copy'()
+print(t3)
+ind4 = PDT$'mutate'(ind1)
+print(ind4$'genotype')
+ev_t1 = PDT$'evaluate_tree'(ind1$'genotype')
+print(ev_t1)
+ev_t2 = PDT$'evaluate_tree'(ind2$'genotype')
+print(ev_t2)
+ev_t3 = PDT$'evaluate_tree'(t3)
+print(ev_t3)
+ev_t4 = PDT$'evaluate_tree'(ind4$'genotype')
+print(ev_t4)
+#print(ind4$'genotype'$'visits_count')
 
-sample_tree <- list()
-sample_tree[[1]] <- c("Duration",">","11")
-sample_tree[[2]] <- c("Amount","<=","900") 
-sample_tree[[3]] <- c("Age",">","21") 
-sample_tree[[4]] <- c("Duration",">","22") 
-sample_tree[[5]] <- c("Amount",">","11") 
-sample_tree[[6]] <- c("Account.withus","<=","0.5") 
-sample_tree[[7]] <- c("Account.for_car",">","0.5") 
+#Evolution
+winner <- PDT$evolve(30)
+print(winner$'genotype')
