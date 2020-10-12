@@ -1,3 +1,5 @@
+source("Main.R")
+
 # All the libraries required for th shiny app 
 library(shiny)
 library(shinyBS)
@@ -18,7 +20,7 @@ shinyUI(ui = tagList(
   withMathJax(),
   
   navbarPage(
-    theme = shinytheme("lumen"),  # <--- To use a theme, uncomment this
+    theme = shinytheme("slate"),  # <--- To use a theme, uncomment this
     strong("MI based classifier"), # Main title name
     
     
@@ -49,8 +51,6 @@ shinyUI(ui = tagList(
                                         includeHTML("Machine_Learning_based_Classifier_desc_td.html"),
                                         style = "info")
              )
-             
-             
     ), 
     
     # Dataset Input ----------------------------------------------------------------
@@ -61,29 +61,37 @@ shinyUI(ui = tagList(
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
                                                 placeholder = "Enter Your Data Here"),
                                       bsPopover("main_data_tooltip", title="",
-                                                content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the varibale to be estimated",
+                                                content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
                                                 trigger = "hover"), 
                                       
-                                      h5("1.Please Select Input Values:",align="centre"),
+                                      h5("Please Select Input Values:",align="centre"),
                                       # Input: Variable Selection Method ----
-                                      radioButtons("method", "Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression")),
+                                      radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression")),
                                   
                                       
                                       # Input: No. of Decision Trees ----
-                                      sliderInput("trees", "How many Decision Trees user wants to select for Evolutionary Algorithm?",
+                                      sliderInput("trees", "Step 2: How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                  min = 10, max=1000,
-                                                 step = 1,animate = TRUE,value = 100)
+                                                 step = 1,animate = TRUE,value = 100),
+                                      
+                                      # Input: Which Decision Trees to be viewed ----
+                                      sliderInput("viewtree", "Step 3: Which Decision Tree the user wants to view with its various associative results?",
+                                                  min = 1, max=1000,
+                                                  step = 1,animate = TRUE,value = 1),
+                                      
+                                      # Downloading the file type
+                                      h5("3.Select the type of plot to be downloaded:",align="centre"),
+                                      radioButtons("filetype","Select the file type",choices = list("png","pdf"))
                                       
                                       
     ),  # Main panel for displaying outputs ----
     mainPanel(
       tabsetPanel(
         type="tab",
-        tabPanel(" View Input Dataset ",dataTableOutput("dataset")),
+        tabPanel(" View Input Dataset ",dataTableOutput("dataset"), tableOutput("col")),
         tabPanel("User Selection Input",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
-        tabPanel("Reduced Dataset after variable selection"),
-                 #,dataTableOutput("Reduced_data")),
-        tabPanel("Classifier")
+        tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data"),dataTableOutput("Reduced_data"), tableOutput("colred")),
+        tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Calculate"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"))
       )
        )
     ),
