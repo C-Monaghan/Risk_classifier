@@ -181,35 +181,35 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
 #summary(a$AUROC)
 # summary(a$Gini_Index)
 
-# Interpretation
-C<-Classifier(default_data,1,20)
-use_python("C:/Users/fredx/Anaconda3",required=T)
-
-for (Ctree in unlist(C$Trees)) {
-  rules <- tidyRules(unlist(C$Trees))
-}
-
-source_python("Source_EA.py")
-PDT <- DecisionTree_EA()
-PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
-#PDT$'initial_population_from_r'(C$Trees)
-for (Ctree in C$Trees) {
-  rules <- tidyRules(Ctree)
-  PDT$'insert_r_tree_to_population'(rules)
-}
-PDT$'evaluate_population'()
-t1 = PDT$'tournament_selection'()
-t1
-t2 = PDT$'tournament_selection'()
-t2
-PDT$'one_point_crossover'(t1,t2)
-PDT$evolve(5)
-
-sample_tree <- list()
-sample_tree[[1]] <- c("Duration",">","11")
-sample_tree[[2]] <- c("Amount","<=","900") 
-sample_tree[[3]] <- c("Age",">","21") 
-sample_tree[[4]] <- c("Duration",">","22") 
-sample_tree[[5]] <- c("Amount",">","11") 
-sample_tree[[6]] <- c("Account.withus","<=","0.5") 
-sample_tree[[7]] <- c("Account.for_car",">","0.5") 
+# # Interpretation
+# C<-Classifier(default_data,1,20)
+# use_python("C:/Users/fredx/Anaconda3",required=T)
+# 
+# for (Ctree in unlist(C$Trees)) {
+#   rules <- tidyRules(unlist(C$Trees))
+# }
+# 
+# source_python("Source_EA.py")
+# PDT <- DecisionTree_EA()
+# PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
+# #PDT$'initial_population_from_r'(C$Trees)
+# for (Ctree in C$Trees) {
+#   rules <- tidyRules(Ctree)
+#   PDT$'insert_r_tree_to_population'(rules)
+# }
+# PDT$'evaluate_population'()
+# t1 = PDT$'tournament_selection'()
+# t1
+# t2 = PDT$'tournament_selection'()
+# t2
+# PDT$'one_point_crossover'(t1,t2)
+# PDT$evolve(5)
+# 
+# sample_tree <- list()
+# sample_tree[[1]] <- c("Duration",">","11")
+# sample_tree[[2]] <- c("Amount","<=","900") 
+# sample_tree[[3]] <- c("Age",">","21") 
+# sample_tree[[4]] <- c("Duration",">","22") 
+# sample_tree[[5]] <- c("Amount",">","11") 
+# sample_tree[[6]] <- c("Account.withus","<=","0.5") 
+# sample_tree[[7]] <- c("Account.for_car",">","0.5") 
