@@ -11,18 +11,27 @@ library("reticulate")
 library("tidyrules")
 library("dplyr")
 library("pander")
-library(caret)
 library(ROCR)
-library(tidyrules)
+#library(tidyrules)
 require(caTools)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
 GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
 default_data <- GermanCredit
+use_python("C:/Users/fredx/Anaconda3",required=T)
+source_python("Source_EA.py")
+
+tree.size <- function(tree) {
+  if (is.null(tree)) {
+    return(0)
+  } else {
+    return(1 + tree.size(tree$left) + tree.size(tree$right))
+  }
+}
 
 # The main function
-Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
+Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   # Cleaning the data before using
   default_data<-na.omit(default_data)
@@ -30,7 +39,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   y=default_data[,1]
   
   ###################### Applying regressions
-
+  
   if (choose_regression==0) {
     
     # ~~~~~ Ridge Regression
@@ -42,19 +51,19 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
     # Reduced dataset
     default_data<-as.data.frame(x[, tmp_coef_ridge@i[-1]])
   }
-   else {
-     
-     # ~~~~~ Lasso Regression
-     cv.out_lasso=cv.glmnet(x,y,alpha=1,family = "binomial")
-     bestlam_lasso=cv.out_lasso$lambda.min
-     tmp_coef_lasso = coef(cv.out_lasso,s=bestlam_lasso)
-     tmp_coef_lasso[tmp_coef_lasso!=0]
-     
-     # Reduced dataset
-     default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
-   }
-
-  if (ncol(default_data)>25) {
+  else {
+    
+    # ~~~~~ Lasso Regression
+    cv.out_lasso=cv.glmnet(x,y,alpha=1,family = "binomial")
+    bestlam_lasso=cv.out_lasso$lambda.min
+    tmp_coef_lasso = coef(cv.out_lasso,s=bestlam_lasso)
+    tmp_coef_lasso[tmp_coef_lasso!=0]
+    
+    # Reduced dataset
+    default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
+  }
+  
+  if (ncol(default_data)>25) { #not needed
     # Fit the full model 
     default_data<-data.frame(Class=y,default_data)
     x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
@@ -80,7 +89,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   Cols <- names(default_data)
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
-  selection=1000
+  #selection=1000
   
   # You construct all possible combinations
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
@@ -104,7 +113,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:selection) {
-    RPI = rpart(Formulas[[i]],data= train,method = "class")
+    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE)
     Forest[[i]] = RPI
   }
   
@@ -138,13 +147,13 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   forest_AUROC = list()
   for(i in 1:selection) {
     RP <- round(performance(forest_pred[[i]], measure = "auc")@y.values[[1]]*100, 2)
-  forest_AUROC[[i]] = RP
+    forest_AUROC[[i]] = RP
   }
   
   forest_Gini = list()
   for(i in 1:selection) {
     RP<- (2*forest_AUROC[[i]] - 100)
-  forest_Gini[[i]] = RP
+    forest_Gini[[i]] = RP
   }
   
   # Making the table of the performance of the trees
@@ -169,7 +178,39 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
 
+initiate_population <- function(Forest){
+  bad_trees_count=0
+  for (Ctree in C$Trees) {
+    if (tree.size(Ctree) > 1){
+      bad_trees_count = bad_trees_count+1
+    }
+    else{
+      rules <- tidyRules(Ctree)
+      #print(rules)
+      PDT$'insert_r_tree_to_population'(rules)
+    }
+  }
+  for (i in 1:bad_trees_count){
+    PDT$'generate_random_tree'()
+  }
+}
 
+
+initiate_ea <- function(Forest, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
+  source_python("Source_EA.py") #temporal, for debugging
+  PDT <- DecisionTree_EA(tournament_size = tournament_size,
+                         crossover_rate = crossover_rate,
+                         mutation_rate = mutation_rate,
+                         elitism_rate = 0.1, 
+                         hall_of_fame_size = 3)
+  PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
+  initiate_population(Forest)
+}
+
+evolve <- function(generations){
+  winner <- PDT$evolve(generations)
+  return(winner)
+}
 
 # a<-Classifier(default_data,1,200)
 # rpart.plot(a$Trees[[1]])
@@ -181,35 +222,3 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
 #summary(a$AUROC)
 # summary(a$Gini_Index)
 
-# # Interpretation
-# C<-Classifier(default_data,1,20)
-# use_python("C:/Users/fredx/Anaconda3",required=T)
-# 
-# for (Ctree in unlist(C$Trees)) {
-#   rules <- tidyRules(unlist(C$Trees))
-# }
-# 
-# source_python("Source_EA.py")
-# PDT <- DecisionTree_EA()
-# PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
-# #PDT$'initial_population_from_r'(C$Trees)
-# for (Ctree in C$Trees) {
-#   rules <- tidyRules(Ctree)
-#   PDT$'insert_r_tree_to_population'(rules)
-# }
-# PDT$'evaluate_population'()
-# t1 = PDT$'tournament_selection'()
-# t1
-# t2 = PDT$'tournament_selection'()
-# t2
-# PDT$'one_point_crossover'(t1,t2)
-# PDT$evolve(5)
-# 
-# sample_tree <- list()
-# sample_tree[[1]] <- c("Duration",">","11")
-# sample_tree[[2]] <- c("Amount","<=","900") 
-# sample_tree[[3]] <- c("Age",">","21") 
-# sample_tree[[4]] <- c("Duration",">","22") 
-# sample_tree[[5]] <- c("Amount",">","11") 
-# sample_tree[[6]] <- c("Account.withus","<=","0.5") 
-# sample_tree[[7]] <- c("Account.for_car",">","0.5") 

@@ -104,8 +104,18 @@ Main<-function(){
   else return(NULL)
 }
 
+#classifier_outputs <- Main()
+
+#f_evolve <- function(){
+# use_python("C:/Users/fredx/Anaconda3",required=T) 
+# for (Ctree in C$Trees) {
+# rules <- tidyRules(CTree)
+# }
+#}
+
 # Show the values in an HTML table ----
 output$Reduced_data <- renderDataTable({
+
   
   input$button
   isolate(if(global$response==T){
@@ -133,6 +143,7 @@ output$Reduced_data <- renderDataTable({
   )
 }, options = list(lengthMenu = c(5, 10, 20, 50,100,500,1000), pageLength = 5), 
 escape = FALSE)
+
 
 output$colred <- renderTable({
   input$button
