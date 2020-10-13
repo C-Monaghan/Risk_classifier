@@ -11,22 +11,23 @@ library("reticulate")
 library("tidyrules")
 library("dplyr")
 library("pander")
+library(caret)
+library(ROCR)
+library(tidyrules)
+require(caTools)
 
-
+# Loading the dataset
 load("GermanCredit.Rdata")
-
 GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
-
 default_data <- GermanCredit
 
-Classifier<-function(default_data,choose_regression = TRUE) {
+# The main function
+Classifier<-function(default_data,choose_regression = TRUE,selection=1000){
   
   # Cleaning the data before using
   default_data<-na.omit(default_data)
   x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
   y=default_data[,1]
-  
-  set.seed(1)
   
   ###################### Applying regressions
 
@@ -62,7 +63,7 @@ Classifier<-function(default_data,choose_regression = TRUE) {
     # Stepwise regression model
     biggest <- formula(glm(default_data[,1]~.,default_data[,-1], family = "binomial"))
     fwd.model<-step(glm(default_data[,1]~1, data=default_data[,-1],family = "binomial"),
-                    direction = "forward", scope = biggest)
+                    direction = "forward", scope = biggest,trace = 0)
     
     # Reduced dataset
     default_data<-as.data.frame(x[,names(fwd.model$coefficients[-1])])
@@ -72,152 +73,143 @@ Classifier<-function(default_data,choose_regression = TRUE) {
   else {
     return(default_data)
   }
+  
   ###################### Decision tree
   
-  return(list(Data=dim(default_data)))
+  # You get the names of the columns
+  Cols <- names(default_data)
+  Cols <- Cols[! Cols %in% "Class"]
+  n <- length(Cols)
+  selection=1000
+  
+  # You construct all possible combinations
+  id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
+                recursive=FALSE)
+  id<-sample(id, selection, replace=FALSE) 
+  
+  # You paste them to formulas
+  Formulas <- sapply(id,function(i)
+    paste("Class~",paste(Cols[i],collapse="+")))
+  
+  #~~~~~~~~ Dividing the data into testing and training
+  
+  ## set the seed to make your partition reproducible
+  set.seed(1) 
+  
+  ## 75% of the sample size
+  sample = sample.split(default_data$Class, SplitRatio = .70)
+  train = subset(default_data, sample == TRUE)
+  test  = subset(default_data, sample == FALSE)
+  
+  # Storing all the combination of trees
+  Forest = list()
+  for(i in 1:selection) {
+    RPI = rpart(Formulas[[i]],data= train,method = "class")
+    Forest[[i]] = RPI
+  }
+  
+  #~~~~~~~~  TESTING PERFORMANCE
+  
+  # Predicting the performance of the trees
+  pred = list()
+  for(i in 1:selection) {
+    RP<-predict(Forest[i],type="class",newdata=test)
+    pred[[i]] = RP
+  }
+  
+  prob = list()
+  for(i in 1:selection){
+    RP<-predict(Forest[i],type="prob",newdata=test)
+    prob[[i]] = RP
+  }
+  
+  forest_pred = list()
+  for(i in 1:selection) {
+    RP<-prediction(prob[[i]][[1]][,2],test[,1])
+    forest_pred[[i]] = RP
+  }
+  
+  forest_perf = list()
+  for(i in 1:selection) {
+    RP<-performance(forest_pred[[i]],"tpr","fpr")
+    forest_perf[[i]] = RP
+  }
+  
+  forest_AUROC = list()
+  for(i in 1:selection) {
+    RP <- round(performance(forest_pred[[i]], measure = "auc")@y.values[[1]]*100, 2)
+  forest_AUROC[[i]] = RP
+  }
+  
+  forest_Gini = list()
+  for(i in 1:selection) {
+    RP<- (2*forest_AUROC[[i]] - 100)
+  forest_Gini[[i]] = RP
+  }
+  
+  # Making the table of the performance of the trees
+  tab= list()
+  for(i in 1:selection) {
+    RP<-table(test[,1],pred[[i]][[1]])
+    tab[[i]] = RP
+  }
+  
+  # Accuracy of the treess
+  acc= list()
+  for(i in 1:selection) {
+    RP<-sum(diag(tab[[i]]))/sum(tab[[i]])
+    acc[[i]] = RP
+  }
+  
+  # Unlisting the trees
+  acc<-unlist(acc, use.names=FALSE)
+  forest_Gini<-unlist(forest_Gini, use.names=FALSE)
+  forest_AUROC<-unlist(forest_AUROC, use.names=FALSE)
+  
+  return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
 
-# Trying decision trees
-prop.table(table(default_data[,1]))
-
-# Trying decision trees
-## Recursive Partitioning and Regression Trees
-# Fit the model
-fit.r <- rpart(default_data[,1]~.,data=default_data)
-
-# Examine the output
-fit.r
-summary(fit.r)
-
-# Plot the tree
-plot(fit.r)
-text(fit.r,use.n=TRUE,cex=0.5,xpd=TRUE,col="red")
-
-# Fit the model
-fit.c <- ctree(default_data[,1]~.,data=default_data)
-
-# Examine the output
-fit.c
-summary(fit.c)
-
-# Plot the tree
-plot(fit.c)
-
-# ~~~~~ Recursive Partitioning and Regression Trees
-# Fit the model
-fit.r <- rpart(default_data[,1]~.,data=default_data)
-
-# ~~~~~ Conditional Inference Trees
-# Fit the model
-fit.c <- ctree(default_data[,1]~.,data=default_data)
-
-# You get the names of the columns
-Cols <- names(default_data)
-Cols <- Cols[! Cols %in% "Class"]
-n <- length(Cols)
- 
-
-# You construct all possible combinations
-id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
-              recursive=FALSE)
-id<-sample(id, 1000, replace=FALSE)
-
-# You paste them to formulas
-Formulas <- sapply(id,function(i)
-  paste("Class~",paste(Cols[i],collapse="+")))
 
 
-aa<-lapply(Formulas,function(i) ctree(as.formula(i),data=default_data))
-bb<- lapply(Formulas,function(i) rpart(as.formula(i),data=default_data))
-getwd()
+# a<-Classifier(default_data,1,200)
+# rpart.plot(a$Trees[[1]])
+# a$Accuracy[1]
+# a$Gini_Index[[1]]
+# a$AUROC[[1]]
+# a$Model_Performance[[1]]
+# colnames(a$Reduced_data)
+#summary(a$AUROC)
+# summary(a$Gini_Index)
 
-
-# save(aa, file="ctree.RData")
-# save(bb, file="rpart.RData")
+# # Interpretation
+# C<-Classifier(default_data,1,20)
+# use_python("C:/Users/fredx/Anaconda3",required=T)
 # 
-# load("ctree.RData")
-# load("rpart.RData")
+# for (Ctree in unlist(C$Trees)) {
+#   rules <- tidyRules(unlist(C$Trees))
+# }
 # 
-# write.csv(ctree,file="ctree.csv")
-# write.csv(rpart,file="rpart.csv")
-
-
-Forest = list()
-for(i in 1:1000) {
-  RPI = rpart(Formulas[[i]],data=default_data,method = "class")
-  Forest[[i]] = RPI
-}
-
-
-save(Forest,file = "Forest.RData" )
-load("Forest.RData")
-write.csv(Forestm,file="Forest.csv")
-write.table(Forest,file = "Forest.csv")
-library(data.table)
-fwrite(Forest,file = "Forest.csv",sep = " " , sep2 = c("","|",""), row.names = T,quote = F,col.names = TRUE)
-
-#~~~~~~~~  TESTING PERFORMANCE
-library(caret)
-pred = list()
-for(i in 1:1000) {
-  RPI<-predict(Forest[i],type="class")
-  pred[[i]] = RPI
-}
-
-tab= list()
-for(i in 1:1000) {
-  RP<-table(default_data[,1],pred[[i]][[1]])
-  tab[[i]] = RP
-}
-
-res= list()
-for(i in 1:1000) {
-  RP<-sum(diag(tab[[i]]))/sum(tab[[i]])
-  res[[i]] = RP
-}
-
-res<-unlist(res, use.names=FALSE)
-summary(res)
-write.table(res,sep="",file = "res.csv",row.names = FALSE)
-
-rpart.plot(bb[[1]])
-plotcp(bb[[1]])
-A<-as.list(aa)
-B<-as.list(bb)
-
-
-
-prp(fit.r, extra = 1)
-plotcp(fit.r)
-
-predict_red_org<-predict(fit.r,type="class")
-tab_red_org<-table(default_data[,1],predict_red_org)
-res_red_org<-sum(diag(tab_red_org))/sum(tab_red_org)
-res_red_org
-confusionMatrix(data = predict_red_org, reference = default_data[,1])
-
-
-pred_a<-predict(A[[100]])
-tab_b<-table(default_data[,1],pred_b)
-res_a<-sum(diag(tab_a))/sum(tab_a)
-res_a
-confusionMatrix(data = pred_a, reference = default_data[,1])
-
-
-pred_b<-predict(B[[100]],type="class")
-tab_a<-table(default_data[,1],pred_a)
-res_b<-sum(diag(tab_b))/sum(tab_b)
-res_b
-confusionMatrix(data = pred_b, reference = default_data[,1])
-
-
-#interpretation
-rules_r <- tidyRules(fit.r)
-print(rules_r)
-print(rules_r[2])
-
-
-use_python("C:/Users/fredx/Anaconda3",required=T)
-source_python("Source_EA.py")
-C = DecisionTree_EA()
-tree_from_r(rules_r)
+# source_python("Source_EA.py")
+# PDT <- DecisionTree_EA()
+# PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
+# #PDT$'initial_population_from_r'(C$Trees)
+# for (Ctree in C$Trees) {
+#   rules <- tidyRules(Ctree)
+#   PDT$'insert_r_tree_to_population'(rules)
+# }
+# PDT$'evaluate_population'()
+# t1 = PDT$'tournament_selection'()
+# t1
+# t2 = PDT$'tournament_selection'()
+# t2
+# PDT$'one_point_crossover'(t1,t2)
+# PDT$evolve(5)
+# 
+# sample_tree <- list()
+# sample_tree[[1]] <- c("Duration",">","11")
+# sample_tree[[2]] <- c("Amount","<=","900") 
+# sample_tree[[3]] <- c("Age",">","21") 
+# sample_tree[[4]] <- c("Duration",">","22") 
+# sample_tree[[5]] <- c("Amount",">","11") 
+# sample_tree[[6]] <- c("Account.withus","<=","0.5") 
+# sample_tree[[7]] <- c("Account.for_car",">","0.5") 
