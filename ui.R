@@ -59,7 +59,18 @@ shinyUI(ui = tagList(
                                       fileInput("sample_file", h4("File input:", bsButton("main_data_tooltip", label = "",
                                                                                           icon = icon("question"), size = "extra-small")),
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
-                                                placeholder = "Enter Your Data Here"),
+                                                placeholder = "Enter Your Data Here"),tags$hr(),
+                                      checkboxInput('header', 'Header', TRUE),
+                                      radioButtons('sep', 'Separator',
+                                                   c(Comma=',',
+                                                     Semicolon=';',
+                                                     Tab='\t'),
+                                                   'Comma'),
+                                      radioButtons('quote', 'Quote',
+                                                   c(None='',
+                                                     'Double Quote'='"',
+                                                     'Single Quote'="'"),
+                                                   'Double Quote'),
                                       bsPopover("main_data_tooltip", title="",
                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
                                                 trigger = "hover"), 
@@ -91,24 +102,24 @@ shinyUI(ui = tagList(
         tabPanel(" View Input Dataset ",dataTableOutput("dataset"), tableOutput("col")),
         tabPanel("User Selection Input",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
         tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data"),dataTableOutput("Reduced_data"), tableOutput("colred")),
-        tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Calculate"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"))
+        tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Calculate"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
       )
        )
     ),
     
     # Classifier (Analysis) ----------------------------------------------------------------
     tabPanel("Evolutionary Algorithm", "This panel is intentionally left blank",
-             
-             selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
-             
-    ),
+   
+ ),
     
     
     
     # About Us ----------------------------------------------------------------
-    tabPanel("About Us", "This panel is intentionally left blank",
+    tabPanel("About Us",
              
-             selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
+             mainPanel(
+               tableOutput('contents')
+             ),
              
              
     )

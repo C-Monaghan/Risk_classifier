@@ -24,6 +24,25 @@ default_data <- GermanCredit
 # ui<-fluidPage(toString(x))
 shinyServer(function(input, output, session) {
   
+  output$contents <- renderTable({
+    
+    # input$file1 will be NULL initially. After the user selects and uploads a 
+    # file, it will be a data frame with 'name', 'size', 'type', and 'datapath' 
+    # columns. The 'datapath' column will contain the local filenames where the 
+    # data can be found.
+    
+    inFile <- input$sample_file
+    
+    if (is.null(inFile))
+      return(default_data)
+    
+    read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
+  })
+  
+  output$dataset <- renderDataTable({
+    default_data
+  }, options = list(lengthMenu = c(5, 10, 20, 50,100,500,1000), pageLength = 5), escape = FALSE)
+  
   # Reactive expression to create data frame of all input values ----
   sliderValues <- reactive({
     
@@ -57,9 +76,7 @@ output$values <- renderTable({
 })
 
 # Show the values in an HTML table ----
-output$dataset <- renderDataTable({
- default_data
-}, options = list(lengthMenu = c(5, 10, 20, 50,100,500,1000), pageLength = 5), escape = FALSE)
+
 
 output$col <- renderTable({
   input$button
@@ -164,6 +181,12 @@ observeEvent(input$button1, {
                global$response <- x
              }
   )
+})
+
+output$res<-renderTable({
+  Main()$Accuracy[[viewtree()]]
+  Main()$AUROC[[viewtree()]]
+  Main()$Gini_Index[[viewtree()]]
 })
 
 output$down<-downloadHandler(
