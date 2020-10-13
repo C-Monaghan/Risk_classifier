@@ -19,8 +19,7 @@ require(caTools)
 load("GermanCredit.Rdata")
 GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
 default_data <- GermanCredit
-use_python("C:/Users/fredx/Anaconda3",required=T)
-source_python("Source_EA.py")
+
 
 tree.size <- function(tree) {
   if (is.null(tree)) {
@@ -197,6 +196,7 @@ initiate_population <- function(Forest){
 
 
 initiate_ea <- function(Forest, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
+  use_python("C:/Users/fredx/Anaconda3",required=T)
   source_python("Source_EA.py") #temporal, for debugging
   PDT <- DecisionTree_EA(tournament_size = tournament_size,
                          crossover_rate = crossover_rate,
