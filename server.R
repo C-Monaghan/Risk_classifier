@@ -11,15 +11,6 @@ load("GermanCredit.Rdata")
 GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
 default_data <- GermanCredit
 
-# use_python("/Users/sajalkaurminhas/Documents/PhD/Group Project/Risk_classifier",required=T)
-# source_python("Source_EA.py")
-# x <- func()
-# #py_config()
-
-# Run in the shell to find your python directory:
-# import os
-# import sys
-# os.path.dirname(sys.executable)
 
 # ui<-fluidPage(toString(x))
 shinyServer(function(input, output, session) {
