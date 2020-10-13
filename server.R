@@ -63,9 +63,19 @@ Main<-function(){
   else return(NULL)
 }
 
+#classifier_outputs <- Main()
+
+#f_evolve <- function(){
+# use_python("C:/Users/fredx/Anaconda3",required=T) 
+# for (Ctree in C$Trees) {
+# rules <- tidyRules(CTree)
+# }
+#}
+
 # Show the values in an HTML table ----
 output$Reduced_data <- renderDataTable({
   Main()$Reduced_data
+  #classifier_outputs$Reduced_data
 }, options = list(pageLength=10), escape = FALSE)
 
 

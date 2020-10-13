@@ -11,15 +11,24 @@ library("reticulate")
 library("tidyrules")
 library("dplyr")
 library("pander")
-library(caret)
 library(ROCR)
-library(tidyrules)
+#library(tidyrules)
 require(caTools)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
 GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
 default_data <- GermanCredit
+use_python("C:/Users/fredx/Anaconda3",required=T)
+source_python("Source_EA.py")
+
+tree.size <- function(tree) {
+  if (is.null(tree)) {
+    return(0)
+  } else {
+    return(1 + tree.size(tree$left) + tree.size(tree$right))
+  }
+}
 
 # The main function
 Classifier<-function(default_data,choose_regression = TRUE,selection=100){
@@ -54,7 +63,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
   }
   
-  if (ncol(default_data)>25) {
+  if (ncol(default_data)>25) { #not needed
     # Fit the full model 
     default_data<-data.frame(Class=y,default_data)
     x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
@@ -80,7 +89,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   Cols <- names(default_data)
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
-  selection=1000
+  #selection=1000
   
   # You construct all possible combinations
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
@@ -104,7 +113,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:selection) {
-    RPI = rpart(Formulas[[i]],data= train,method = "class")
+    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE)
     Forest[[i]] = RPI
   }
   
@@ -169,7 +178,39 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
 }
 
+initiate_population <- function(Forest){
+  bad_trees_count=0
+  for (Ctree in C$Trees) {
+    if (tree.size(Ctree) > 1){
+      bad_trees_count = bad_trees_count+1
+    }
+    else{
+      rules <- tidyRules(Ctree)
+      #print(rules)
+      PDT$'insert_r_tree_to_population'(rules)
+    }
+  }
+  for (i in 1:bad_trees_count){
+    PDT$'generate_random_tree'()
+  }
+}
 
+
+initiate_ea <- function(Forest, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
+  source_python("Source_EA.py") #temporal, for debugging
+  PDT <- DecisionTree_EA(tournament_size = tournament_size,
+                         crossover_rate = crossover_rate,
+                         mutation_rate = mutation_rate,
+                         elitism_rate = 0.1, 
+                         hall_of_fame_size = 3)
+  PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
+  initiate_population(Forest)
+}
+
+evolve <- function(generations){
+  winner <- PDT$evolve(generations)
+  return(winner)
+}
 
 # a<-Classifier(default_data,1,200)
 # rpart.plot(a$Trees[[1]])
@@ -180,51 +221,3 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
 # colnames(a$Reduced_data)
 #summary(a$AUROC)
 # summary(a$Gini_Index)
-
-#interpretation
-C<-Classifier(default_data,1,100)
-use_python("C:/Users/fredx/Anaconda3",required=T)
-
-for (Ctree in unlist(C$Trees)) {
-  rules <- tidyRules(unlist(C$Trees))
-}
-
-source_python("Source_EA.py")
-#Creates the Python class
-PDT <- DecisionTree_EA(tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3)
-#Gives the data to python, python can relate now to the attributes and output_labels
-PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
-#Initialisation of the population with trees from R:
-for (Ctree in C$Trees) {
-  rules <- tidyRules(Ctree)
-  PDT$'insert_r_tree_to_population'(rules)
-}
-#Logs: print the poll of crucial values for each attribute
-for (att in PDT$'attributes'){
-  print(att$'name')
-  print(att$'crucial_values')
-}
-#Genetic operators test
-PDT$'evaluate_population'()
-ind1 = PDT$'tournament_selection'()
-print(ind1$'genotype')
-ind2 = PDT$'tournament_selection'()
-print(ind2$'genotype')
-crossovers = PDT$'one_point_crossover'(ind1,ind2)
-t3 = ind2$'genotype'$'copy'()
-print(t3)
-ind4 = PDT$'mutate'(ind1)
-print(ind4$'genotype')
-ev_t1 = PDT$'evaluate_tree'(ind1$'genotype')
-print(ev_t1)
-ev_t2 = PDT$'evaluate_tree'(ind2$'genotype')
-print(ev_t2)
-ev_t3 = PDT$'evaluate_tree'(t3)
-print(ev_t3)
-ev_t4 = PDT$'evaluate_tree'(ind4$'genotype')
-print(ev_t4)
-#print(ind4$'genotype'$'visits_count')
-
-#Evolution
-winner <- PDT$evolve(30)
-print(winner$'genotype')

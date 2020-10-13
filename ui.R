@@ -19,7 +19,7 @@ shinyUI(ui = tagList(
   
   navbarPage(
     theme = shinytheme("lumen"),  # <--- To use a theme, uncomment this
-    strong("MI based classifier"), # Main title name
+    title = strong("MI based classifier"), # Main title name
     
     
     # Home --------------------------------------------------------------------
@@ -71,8 +71,8 @@ shinyUI(ui = tagList(
                                       
                                       # Input: No. of Decision Trees ----
                                       sliderInput("trees", "How many Decision Trees user wants to select for Evolutionary Algorithm?",
-                                                 min = 10, max=1000,
-                                                 step = 1,animate = TRUE,value = 100)
+                                                 min = 20, max=800,
+                                                 step = 4,animate = TRUE,value = 200)
                                       
                                       
     ),  # Main panel for displaying outputs ----
@@ -88,12 +88,51 @@ shinyUI(ui = tagList(
        )
     ),
     
-    # Classifier (Analysis) ----------------------------------------------------------------
-    tabPanel("Evolutionary Algorithm", "This panel is intentionally left blank",
+    # Evolutionary Algorithm ----------------------------------------------------------------
+    tabPanel("Evolutionary Algorithm", 
+              sidebarPanel(width = 3,
+                          sliderInput("generations", 
+                                      "Generations",
+                                      min = 10, 
+                                      max=200,
+                                      step = 10,
+                                      animate = TRUE,
+                                      value = 10),
+                          actionButton("evolve", 
+                                       "Start evolution"),
+                          actionButton("stop", 
+                                       "Stop evolution")
+                          ),
+              mainPanel(tabsetPanel(type="tab",
+                                    tabPanel("Hyperparameters",
+                                             sliderInput("tournament_size", 
+                                                         "Tournament size",
+                                                         min = 1, 
+                                                         max=10,
+                                                         step = 1,
+                                                         animate = TRUE,
+                                                         value = 3),
+                                             sliderInput("mutation_rate", 
+                                                         "Mutation rate",
+                                                         min = 0, 
+                                                         max=1,
+                                                         step = 0.05,
+                                                         animate = TRUE,
+                                                         value = 0.5),
+                                             sliderInput("crossover_rate", 
+                                                         "Crossover rate",
+                                                         min = 0, 
+                                                         max=1,
+                                                         step = 0.05,
+                                                         animate = TRUE,
+                                                         value = 0.5),
+                                             ),
+                                    tabPanel("Set of available rules"),
+                                    tabPanel("View trees")
+                                    )
+                        )
              
-             selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
-             
-    ),
+            ),
     
     
     

@@ -347,6 +347,20 @@ class DecisionTree_EA: #oblique, binary trees
 		self.output_label = rd.choice(self.unique_output_labels)
 		return terminal_node
 		
+	def generate_random_tree(max_depth=3, method = "Grow"): #missing adding names (might not be needed)
+		if max_depth == 0:
+			return self.generate_random_terminal()
+		else:
+			root = self.generate_random_node()
+			if method == "Grow":
+				for i in range(2):
+					if rd.choice([True,False]):
+						child = self.generate_random_tree(max_depth = max_depth-1, method = method)
+					else:
+						child = self.generate_random_terminal()
+					root.add_child(name=None,child=child)
+		return root
+		
 	def evolve(self, generations = 1): #unfinished, also missing verification of existent nodes
 		for i_gen in range(int(generations)):
 			self.evaluate_population()
