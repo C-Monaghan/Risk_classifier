@@ -346,7 +346,7 @@ class DecisionTree_EA: #oblique, binary trees
 		terminal_node = DT_Node()
 		self.output_label = rd.choice(self.unique_output_labels)
 		return terminal_node
-		
+
 	def generate_random_tree(max_depth=3, method = "Grow"): #missing adding names (might not be needed)
 		if max_depth == 0:
 			return self.generate_random_terminal()
@@ -360,6 +360,7 @@ class DecisionTree_EA: #oblique, binary trees
 						child = self.generate_random_terminal()
 					root.add_child(name=None,child=child)
 		return root
+
 		
 	def evolve(self, generations = 1): #unfinished, also missing verification of existent nodes
 		for i_gen in range(int(generations)):
@@ -380,7 +381,9 @@ class DecisionTree_EA: #oblique, binary trees
 			
 			print("Gen ", str(self.generation), "Best so far:", str(sorted_competitors[0].objective_values[0]),str(sorted_competitors[1].objective_values[0]))
 			for i in range(10):
+
 				print(str(sorted_competitors[i].objective_values[0]),str(sorted_competitors[i].genotype))
+
 			if elites > 0: #missing hall of fame
 				newgen_pop.extend(sorted_competitors[:elites])
 			self.population = newgen_pop
@@ -430,6 +433,7 @@ class DecisionTree_EA: #oblique, binary trees
 			labels = self.evaluate_tree(ind.genotype)
 			accuracy = self.calculate_accuracy(model_output_labels=labels)
 			#print(accuracy)
+
 			ind.objective_values = [accuracy]
 			#ind.objective_values[0] = accuracy how come this didn´t work
 			

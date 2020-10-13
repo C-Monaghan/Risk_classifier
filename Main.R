@@ -221,3 +221,4 @@ evolve <- function(generations){
 # colnames(a$Reduced_data)
 #summary(a$AUROC)
 # summary(a$Gini_Index)
+
