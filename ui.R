@@ -21,7 +21,7 @@ shinyUI(ui = tagList(
   
   navbarPage(
 
-    theme = shinytheme("slate"),  # <--- To use a theme, uncomment this
+    theme = shinytheme("slate"),  # <--- To use a theme, 
     strong("MI based classifier"), # Main title name
 
     
@@ -59,9 +59,13 @@ shinyUI(ui = tagList(
     tabPanel("Dataset",  sidebarPanel(width = 3,
                                       
                                       fileInput("sample_file", h4("File input:", bsButton("main_data_tooltip", label = "",
-                                                                                          icon = icon("question"), size = "extra-small")),
+                                                icon = icon("question"), size = "extra-small")),
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
-                                                placeholder = "Enter Your Data Here"),tags$hr(),
+                                                placeholder = "Enter Your Data Here"),
+                                          bsPopover("main_data_tooltip", title="Data file",
+                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
+                                                 trigger = "hover"),
+                                      #tags$hr(),
                                       checkboxInput('header', 'Header', TRUE),
                                       radioButtons('sep', 'Separator',
                                                    c(Comma=',',
@@ -73,9 +77,7 @@ shinyUI(ui = tagList(
                                                      'Double Quote'='"',
                                                      'Single Quote'="'"),
                                                    'Double Quote'),
-                                      bsPopover("main_data_tooltip", title="",
-                                                content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
-                                                trigger = "hover"), 
+                                      
                                       
                                       h5("Please Select Input Values:",align="centre"),
                                       # Input: Variable Selection Method ----
