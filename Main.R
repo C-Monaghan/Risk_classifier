@@ -17,9 +17,7 @@ require(caTools)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
-GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
-default_data <- GermanCredit
-
+default_data<-GermanCredit
 
 tree.size <- function(tree) {
   if (is.null(tree)) {
@@ -82,17 +80,20 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     return(default_data)
   }
   
-  ###################### Decision tree
+  # Changing the variable to binary which are stored as numeric
+  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
   
+  ###################### Decision tree
+
   # You get the names of the columns
   Cols <- names(default_data)
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
-  #selection=1000
   
   # You construct all possible combinations
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
                 recursive=FALSE)
+  
   id<-sample(id, selection, replace=FALSE) 
   
   # You paste them to formulas
@@ -212,7 +213,7 @@ evolve <- function(generations){
   return(winner)
 }
 
-# a<-Classifier(default_data,1,200)
+# a<-Classifier(default_data,1,20)
 # rpart.plot(a$Trees[[1]])
 # a$Accuracy[1]
 # a$Gini_Index[[1]]
