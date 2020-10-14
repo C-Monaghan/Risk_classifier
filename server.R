@@ -10,6 +10,73 @@ library(reticulate)
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
 
+
+
+
+
+use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+source_python("Source_EA.py")
+
+initiate_population <- function(Forest){
+  bad_trees_count=0
+  for (Ctree in C$Trees) {
+    if (tree.size(Ctree) > 1){
+      bad_trees_count = bad_trees_count+1
+    }
+    else{
+      rules <- tidyRules(Ctree)
+      #print(rules)
+      PDT$'insert_r_tree_to_population'(rules)
+    }
+  }
+  print(paste0("Bad trees: ", bad_trees_count))
+  for (i in 1:bad_trees_count){
+    random_tree = PDT$'generate_random_tree'()
+    PDT$'insert_tree_to_population'(random_tree)
+  }
+}
+
+initiate_ea <- function(forest,dataset, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
+  PDT <- DecisionTree_EA(tournament_size = tournament_size,
+                         crossover_rate = crossover_rate,
+                         mutation_rate = mutation_rate,
+                         elitism_rate = 0.1,
+                         hall_of_fame_size = 3)
+  PDT$'adapt_to_data'(labels = dataset$Class, data=dataset) #CHANGE: hardcoded to Class
+  names <- PDT$'get_attribute_names'()
+  n_atts = length(names)
+  values <- PDT$'get_crucial_values'()
+  print(values)
+  len <- sapply(values,length)
+  len <- n_atts - len
+  crucial_values <- data.frame(mapply( function(x,y) c( x , rep( NA , y ) ) , values , len ))
+  #print("values")
+  #print(values)
+  print("names")
+  print(names)
+  print(length(names))
+  
+  #crucial_values <- data.frame(values)
+  #colnames(crucial_values) <- names
+  print(crucial_values)
+  #initiate_population(forest)
+  return (crucial_values)
+}
+
+evolve <- function(generations){
+  winner <- PDT$evolve(generations)
+  return(winner)
+}
+
+testf <- function(){
+  na <- test_get_names()
+  return(na)
+}
+
+
+
+
+
 shinyServer(function(input, output, session){
   
   output$dataset <- renderDataTable({
@@ -91,7 +158,7 @@ observeEvent(input$button, {
 
 Main<-reactive({
   input$button
-Classifier(original_data(),  method(),trees())
+Classifier(original_data(), method(),trees())
 })
 
 #classifier_outputs <- Main()
@@ -179,6 +246,14 @@ observeEvent(input$button1, {
                global$response <- x
              }
   )
+})
+
+observeEvent(input$evolve, {
+  initiate_ea(forest = Main()$Trees, dataset = Main()$Test_data)
+  #print("hola")
+  #print(length(Main()$Trees))
+  #print(testf())
+  #rpart.plot(Main()$Trees[[1]])
 })
 
 output$res<-renderTable({

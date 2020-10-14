@@ -43,6 +43,7 @@ def add_crucial_value(attribute,value):
 		attribute.crucial_values = attribute.crucial_values + [value]
 		print("Added crucial value ", str(value), " to attribute ", attribute.name, ". All values:", str(attribute.crucial_values))
 		return index
+	
 		
 class Objective:
 	def __init__(self,
@@ -361,7 +362,6 @@ class DecisionTree_EA: #oblique, binary trees
 					root.add_child(name=None,child=child)
 		return root
 
-		
 	def evolve(self, generations = 1): #unfinished, also missing verification of existent nodes
 		for i_gen in range(int(generations)):
 			self.evaluate_population()
@@ -392,8 +392,6 @@ class DecisionTree_EA: #oblique, binary trees
 		sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
 		print("Gen ", str(self.generation), "Best so far:", sorted_competitors[0].objective_values[0])
 		return sorted_competitors[0]
-	
-	#def plot_tree(self,
 	
 	def tournament_selection(self): #population could be sorted before to avoid repetition
 		competitors = rd.sample(self.population, self.tournament_size)
@@ -449,8 +447,11 @@ class DecisionTree_EA: #oblique, binary trees
 	
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self.parse_tree_r(tree)
+		self.insert_tree_to_population(parsed_tree)
+	
+	def insert_tree_to_population(self,tree):
 		individual = Individual(generation_of_creation = self.current_generation,
-								genotype = parsed_tree)
+								genotype = tree)
 		self.population.append(individual)
 	
 	def parse_tree_r(self, tree):
@@ -521,7 +522,23 @@ class DecisionTree_EA: #oblique, binary trees
 		
 		return attribute, operator, comparable_value, comparable_value_index
 		
+	def get_attribute_names(self):
+		at_names = [attribute.name for attribute in self.attributes.values()]
+		return at_names
+	
+	def get_crucial_values(self):
+		at_values = [attribute.crucial_values for attribute in self.attributes.values()]
+		print("In python")
+		print(at_values)
+		return at_values
 		
+def test_get_numbers():
+	return [[1,2],[2,3],[]]
+	#return ["Hola","mundo"]
+	
+def test_get_names():
+	#return [[1,2],[2,3]]
+	return ["Hola","mundo"]
 """
 #interpretation
 C<-Classifier(default_data,1,100)
