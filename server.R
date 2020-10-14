@@ -24,7 +24,7 @@ shinyServer(function(input, output, session){
   
   ## Original Data
   original_data <- reactive({
-    
+    input$button
     inFile <- input$sample_file
     if (is.null(inFile))
       return(default_data)
@@ -72,7 +72,6 @@ output$values <- renderTable({
 
 
 output$col <- renderTable({
-  input$button
   colnames(original_data())
 }, caption=paste("Variables in the dataset"),
 caption.placement = getOption("xtable.caption.placement", "top"),
@@ -91,10 +90,8 @@ observeEvent(input$button, {
 })
 
 Main<-reactive({
-  if(global$response==T){
-    isolate(Classifier(original_data(),  method(),trees()))
-  }
-  else return(NULL)
+  input$button
+Classifier(original_data(),  method(),trees())
 })
 
 #classifier_outputs <- Main()
@@ -108,7 +105,6 @@ Main<-reactive({
 
 # Show the values in an HTML table ----
 output$Reduced_data <- renderDataTable({
-  
   input$button
   isolate(if(global$response==T){
     # Create 0-row data frame which will be used to store data
@@ -138,7 +134,6 @@ escape = FALSE)
 
 
 output$colred <- renderTable({
-  input$button
   colnames(Main()$Reduced_data)
 }, caption=paste("Reduced variables in the dataset"),
 caption.placement = getOption("xtable.caption.placement", "top"),
@@ -194,7 +189,6 @@ output$res<-renderTable({
 })
 
 output$down<-downloadHandler(
-  input$button,
   #Specify filename
   filename = function(){
     paste("DecisionTree",input$filetype,sep=".")
@@ -214,7 +208,6 @@ output$down<-downloadHandler(
 
 
 output$down1<-downloadHandler(
-  input$button1,
   #Specify filename
   filename = function(){
     paste("DecisionTree",input$filetype,sep=".")
