@@ -91,8 +91,11 @@ observeEvent(input$button, {
 
 Main<-reactive({
   input$button
+  isolate(if(global$response==T){
 Classifier(original_data(),  method(),trees())
-})
+  } else  return(NULL)
+  )
+    })
 
 #classifier_outputs <- Main()
 
@@ -134,7 +137,12 @@ escape = FALSE)
 
 
 output$colred <- renderTable({
-  colnames(Main()$Reduced_data)
+  input$button
+  isolate(if(global$response==T){
+ colnames(Main()$Reduced_data)
+  } else  return(NULL)
+  )
+
 }, caption=paste("Reduced variables in the dataset"),
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
@@ -188,25 +196,17 @@ output$res<-renderTable({
   # Main()$Gini_Index[[viewtree()]]
 })
 
-output$down<-downloadHandler(
-  #Specify filename
-  filename = function(){
-    paste("DecisionTree",input$filetype,sep=".")
+#~~~~ Download the reduced dataset
+output$down <- downloadHandler(
+  filename = function() {
+    paste("ReducedData.csv", sep = "")
   },
-  content = function(file){
-    #open the device <-png(),pdf()
-    # create/write the plot
-    #close the device
-    if(input$filetype=="png")
-      png(file)
-    else
-      pdf(file)
-    Main()$Reduced_data
-    dev.off()
+  content = function(file) {
+    write.csv(Main()$Reduced_data, file, row.names = FALSE)
   }
 )
 
-
+#~~~~ Download the decision tree plot
 output$down1<-downloadHandler(
   #Specify filename
   filename = function(){

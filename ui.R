@@ -106,7 +106,7 @@ shinyUI(ui = tagList(
         type="tab",
         tabPanel(" View Input Dataset ",dataTableOutput("dataset"), tableOutput("col")),
         tabPanel("User Selection Input",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
-        tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data"),dataTableOutput("Reduced_data"), tableOutput("colred")),
+        tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data in .csv"),dataTableOutput("Reduced_data"), tableOutput("colred")),
         tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Calculate"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
       )
        )
