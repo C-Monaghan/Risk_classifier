@@ -90,12 +90,12 @@ observeEvent(input$button, {
   )
 })
 
-Main<-function(){
+Main<-reactive({
   if(global$response==T){
     isolate(Classifier(original_data(),  method(),trees()))
   }
   else return(NULL)
-}
+})
 
 #classifier_outputs <- Main()
 
@@ -187,12 +187,14 @@ observeEvent(input$button1, {
 })
 
 output$res<-renderTable({
+  input$button1
   Main()$Accuracy[[viewtree()]]
   # Main()$AUROC[[viewtree()]]
   # Main()$Gini_Index[[viewtree()]]
 })
 
 output$down<-downloadHandler(
+  input$button,
   #Specify filename
   filename = function(){
     paste("DecisionTree",input$filetype,sep=".")
@@ -212,6 +214,7 @@ output$down<-downloadHandler(
 
 
 output$down1<-downloadHandler(
+  input$button1,
   #Specify filename
   filename = function(){
     paste("DecisionTree",input$filetype,sep=".")
