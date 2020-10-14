@@ -8,19 +8,11 @@ library(reticulate)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
-GermanCredit<-GermanCredit[,c(10,1:9,11:62)]
-default_data <- GermanCredit
+default_data<-GermanCredit
 
-
-# ui<-fluidPage(toString(x))
-shinyServer(function(input, output, session) {
+shinyServer(function(input, output, session){
   
-  output$contents <- renderTable({
-    
-    # input$file1 will be NULL initially. After the user selects and uploads a 
-    # file, it will be a data frame with 'name', 'size', 'type', and 'datapath' 
-    # columns. The 'datapath' column will contain the local filenames where the 
-    # data can be found.
+  output$dataset <- renderDataTable({
     
     inFile <- input$sample_file
     
@@ -28,11 +20,21 @@ shinyServer(function(input, output, session) {
       return(default_data)
     
     read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
-  })
+  }, options = list(lengthMenu = c(2,5, 10, 20, 50,100,500,1000), pageLength = 2), escape = FALSE)
   
-  output$dataset <- renderDataTable({
-    default_data
-  }, options = list(lengthMenu = c(5, 10, 20, 50,100,500,1000), pageLength = 5), escape = FALSE)
+  ## Original Data
+  original_data <- reactive({
+    
+    inFile <- input$sample_file
+    if (is.null(inFile))
+      return(default_data)
+    
+    else {
+      ori_data <- read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
+      ori_data
+      }
+       })
+  
   
   # Reactive expression to create data frame of all input values ----
   sliderValues <- reactive({
@@ -71,7 +73,7 @@ output$values <- renderTable({
 
 output$col <- renderTable({
   input$button
-  colnames(default_data)
+  colnames(original_data())
 }, caption=paste("Variables in the dataset"),
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
@@ -90,7 +92,7 @@ observeEvent(input$button, {
 
 Main<-function(){
   if(global$response==T){
-    Classifier(default_data,  method(),trees())
+    isolate(Classifier(original_data(),  method(),trees()))
   }
   else return(NULL)
 }
@@ -106,7 +108,6 @@ Main<-function(){
 
 # Show the values in an HTML table ----
 output$Reduced_data <- renderDataTable({
-
   
   input$button
   isolate(if(global$response==T){
@@ -132,7 +133,7 @@ output$Reduced_data <- renderDataTable({
     })
   } else  return(NULL)
   )
-}, options = list(lengthMenu = c(5, 10, 20, 50,100,500,1000), pageLength = 5), 
+}, options = list(lengthMenu = c(2,5, 10, 20, 50,100,500,1000), pageLength = 2), 
 escape = FALSE)
 
 
@@ -187,8 +188,8 @@ observeEvent(input$button1, {
 
 output$res<-renderTable({
   Main()$Accuracy[[viewtree()]]
-  Main()$AUROC[[viewtree()]]
-  Main()$Gini_Index[[viewtree()]]
+  # Main()$AUROC[[viewtree()]]
+  # Main()$Gini_Index[[viewtree()]]
 })
 
 output$down<-downloadHandler(
@@ -223,12 +224,10 @@ output$down1<-downloadHandler(
       png(file)
     else
       pdf(file)
-    prp(Main()$Trees[[viewtree()]],roundint=FALSE)
+    rpart.plot(Main()$Trees[[viewtree()]],roundint=FALSE)
     dev.off()
   }
 )
 
 })
 
-
-#shinyApp(ui=ui,server=server)

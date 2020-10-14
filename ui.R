@@ -161,9 +161,7 @@ shinyUI(ui = tagList(
     # About Us ----------------------------------------------------------------
     tabPanel("About Us",
              
-             mainPanel(
-               tableOutput('contents')
-             ),
+            
              
              
     )
