@@ -14,6 +14,7 @@ library("pander")
 library(ROCR)
 #library(tidyrules)
 require(caTools)
+library(rlist)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
@@ -94,7 +95,10 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
                 recursive=FALSE)
   
-  id<-sample(id, selection, replace=FALSE) 
+  id<-sample(id, 1000, replace=FALSE) 
+  id<-lapply(id, function(x) list.remove(x,length(x)<2))
+  id<-list.clean(id, function(x) length(x) == 0L, TRUE)
+ 
   
   # You paste them to formulas
   Formulas <- sapply(id,function(i)
@@ -138,18 +142,21 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     forest_pred[[i]] = RP
   }
   
+  # Performance of each trees
   forest_perf = list()
   for(i in 1:selection) {
     RP<-performance(forest_pred[[i]],"tpr","fpr")
     forest_perf[[i]] = RP
   }
   
+  # AUROC of each trees
   forest_AUROC = list()
   for(i in 1:selection) {
     RP <- round(performance(forest_pred[[i]], measure = "auc")@y.values[[1]]*100, 2)
     forest_AUROC[[i]] = RP
   }
   
+  # Gini Index of each trees
   forest_Gini = list()
   for(i in 1:selection) {
     RP<- (2*forest_AUROC[[i]] - 100)
