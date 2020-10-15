@@ -189,11 +189,25 @@ observeEvent(input$button1, {
   )
 })
 
+
+Values <- reactive({
+  
+  data.frame(
+    Name = c("Accuracy of the Tree",
+             "Gini Index","AUROC"),
+    Value = as.character(c(Main()$Accuracy[[viewtree()]], Main()$Gini_Index[[viewtree()]],
+                           Main()$AUROC[[viewtree()]])),
+    stringsAsFactors = FALSE)
+  
+})
+
 output$res<-renderTable({
   input$button1
-  Main()$Accuracy[[viewtree()]]
-  # Main()$AUROC[[viewtree()]]
-  # Main()$Gini_Index[[viewtree()]]
+  isolate(if(global$response==T){
+    Values()
+  }
+  else  return(NULL)
+  )
 })
 
 #~~~~ Download the reduced dataset
