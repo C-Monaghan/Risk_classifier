@@ -21,7 +21,7 @@ shinyUI(ui = tagList(
   
   navbarPage(
 
-    theme = shinytheme("slate"),  # <--- To use a theme, 
+    theme = shinytheme("slate"),  # <--- To use a theme, uncomment this
     strong("MI based classifier"), # Main title name
 
     
@@ -59,7 +59,7 @@ shinyUI(ui = tagList(
     tabPanel("Dataset",  sidebarPanel(width = 3,
                                       
                                       fileInput("sample_file", h4("File input:", bsButton("main_data_tooltip", label = "",
-                                                icon = icon("question"), size = "extra-small")),
+                                                                                          icon = icon("question"), size = "extra-small")),
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
                                                 placeholder = "Enter Your Data Here"),
                                           bsPopover("main_data_tooltip", title="File format",
@@ -67,6 +67,7 @@ shinyUI(ui = tagList(
                                                  trigger = "hover"),
                                       #tags$hr(),
                                       h4(helpText("Is there a header in the data?")),
+
                                       checkboxInput('header', 'Header', TRUE),
                                       radioButtons('sep', 'Separator',
                                                    c(Comma=',',
@@ -78,7 +79,9 @@ shinyUI(ui = tagList(
                                                      'Double Quote'='"',
                                                      'Single Quote'="'"),
                                                    'Double Quote'),
-                                      
+                                      bsPopover("main_data_tooltip", title="",
+                                                content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
+                                                trigger = "hover"), 
                                       
                                       h4("Please Select Input Values:",align="centre"),
                                       # Input: Variable Selection Method ----
@@ -89,7 +92,7 @@ shinyUI(ui = tagList(
 
                                       sliderInput("trees", "Step 2: How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                  min = 20, max=800,
-                                                 step = 4,animate = TRUE,value = 200),
+                                                 step = 4,animate = TRUE,value = 100),
                                       
                                       # Input: Which Decision Trees to be viewed ----
                                       sliderInput("viewtree", "Step 3: Which Decision Tree the user wants to view with its various associative results?",
@@ -152,7 +155,8 @@ shinyUI(ui = tagList(
                                                          animate = TRUE,
                                                          value = 0.5),
                                              ),
-                                    tabPanel("Set of available rules"),
+                                    tabPanel("Set of available rules",
+                                             dataTableOutput("crucial_values")),
                                     tabPanel("View trees")
                                     )
                         )
