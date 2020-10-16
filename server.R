@@ -10,8 +10,8 @@ library(reticulate)
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
 
-use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-source_python("Source_EA.py")
+# use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+# source_python("Source_EA.py")
 
 
 initiate_ea <- function(forest,dataset, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
@@ -247,7 +247,7 @@ observeEvent(input$button1, {
 
 observeEvent(input$evolve, {
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Reduced_data)
-  output$crucial_values <- renderDataTable(crucial_values)
+  output$crucial_values <- renderDataTable(crucial_values)})
 
 
 Values <- reactive({
