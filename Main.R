@@ -31,6 +31,8 @@ tree.size <- function(tree) {
 # The main function
 Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
+  if(length(unique(na.omit(default_data[,1]))) <= 2L){
+    
   # Cleaning the data before using
   default_data<-na.omit(default_data)
   x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
@@ -183,7 +185,9 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   forest_AUROC<-unlist(forest_AUROC, use.names=FALSE)
   
   return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
-}
+  }
+  else NULL
+  }
 
 initiate_population <- function(Forest){
   bad_trees_count=0

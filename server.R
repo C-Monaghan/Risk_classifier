@@ -142,7 +142,6 @@ output$colred <- renderTable({
  colnames(Main()$Reduced_data)
   } else  return(NULL)
   )
-
 }, caption=paste("Reduced variables in the dataset"),
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
