@@ -19,14 +19,16 @@ library(rlist)
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
+#use_python("C:/Users/fredx/Anaconda3",required=T)
+#source_python("Source_EA.py")
 
-tree.size <- function(tree) {
-  if (is.null(tree)) {
-    return(0)
-  } else {
-    return(1 + tree.size(tree$left) + tree.size(tree$right))
-  }
-}
+# tree.size <- function(tree) {
+#   if (is.null(tree)) {
+#     return(0)
+#   } else {
+#     return(1 + tree.size(tree$left) + tree.size(tree$right))
+#   }
+# }
 
 # The main function
 Classifier<-function(default_data,choose_regression = TRUE,selection=100){
@@ -84,7 +86,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   }
   
   # Changing the variable to binary which are stored as numeric
-  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+  #default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
   
   ###################### Decision tree
 
@@ -118,7 +120,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   # Storing all the combination of trees
   Forest = list()
-  for(i in 1:selection) {
+  for(i in 1:selection) { #CHANGE: this is not random
     RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE)
     Forest[[i]] = RPI
   }
@@ -206,23 +208,28 @@ initiate_population <- function(Forest){
   }
 }
 
-
-initiate_ea <- function(Forest, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
-  use_python("C:/Users/fredx/Anaconda3",required=T)
-  source_python("Source_EA.py") #temporal, for debugging
-  PDT <- DecisionTree_EA(tournament_size = tournament_size,
-                         crossover_rate = crossover_rate,
-                         mutation_rate = mutation_rate,
-                         elitism_rate = 0.1, 
-                         hall_of_fame_size = 3)
-  PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
-  initiate_population(Forest)
-}
-
-evolve <- function(generations){
-  winner <- PDT$evolve(generations)
-  return(winner)
-}
+# 
+# initiate_ea <- function(Forest, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
+#   use_python("C:/Users/fredx/Anaconda3",required=T)
+#   source_python("Source_EA.py") #temporal, for debugging
+#   PDT <- DecisionTree_EA(tournament_size = tournament_size,
+#                          crossover_rate = crossover_rate,
+#                          mutation_rate = mutation_rate,
+#                          elitism_rate = 0.1, 
+#                          hall_of_fame_size = 3)
+#   PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
+#   initiate_population(Forest)
+# }
+# 
+# evolve <- function(generations){
+#   winner <- PDT$evolve(generations)
+#   return(winner)
+# }
+# 
+# testf <- function(){
+#    na <- test_get_names()
+#    return(na)
+# }
 
 # a<-Classifier(default_data,1,20)
 # rpart.plot(a$Trees[[1]])
