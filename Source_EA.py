@@ -281,14 +281,6 @@ class DecisionTree_EA: #oblique, binary trees
 													worst_known_value = worst_known_value)
 		self.n_objectives = self.n_objectives + 1
 
-	def attribute_mutation(self,
-			individual):
-		pass
-
-	def attribute_value_mutation(self,
-			individual):
-		pass
-	
 	def one_point_crossover(self, individual1, individual2):
 		tree1 = individual1.genotype
 		tree2 = individual2.genotype
@@ -345,10 +337,10 @@ class DecisionTree_EA: #oblique, binary trees
 	
 	def generate_random_terminal(self):
 		terminal_node = DT_Node()
-		self.output_label = rd.choice(self.unique_output_labels)
+		self.output_label = rd.choice(list(self.unique_output_labels))
 		return terminal_node
 
-	def generate_random_tree(max_depth=3, method = "Grow"): #missing adding names (might not be needed)
+	def generate_random_tree(self,max_depth=3, method = "Grow"): #missing adding names (might not be needed)
 		if max_depth == 0:
 			return self.generate_random_terminal()
 		else:
@@ -377,7 +369,8 @@ class DecisionTree_EA: #oblique, binary trees
 			for i in range(mutations):
 				parent = self.tournament_selection()
 				newgen_pop.append(self.mutate(parent))
-			sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
+			#sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
+			sorted_competitors = self.sort_individuals()
 			
 			print("Gen ", str(self.generation), "Best so far:", str(sorted_competitors[0].objective_values[0]),str(sorted_competitors[1].objective_values[0]))
 			for i in range(10):
@@ -389,14 +382,18 @@ class DecisionTree_EA: #oblique, binary trees
 			self.population = newgen_pop
 			self.generation = self.generation + 1
 		self.evaluate_population()
-		sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
-		print("Gen ", str(self.generation), "Best so far:", sorted_competitors[0].objective_values[0])
-		return sorted_competitors[0]
+		winner = self.get_best_individual()
+		#sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
+		#sorted_competitors = self.sort_individuals()
+		print("Gen ", str(self.generation), "Best so far:", winner.objective_values[0])
+		return winner
 	
 	def tournament_selection(self): #population could be sorted before to avoid repetition
 		competitors = rd.sample(self.population, self.tournament_size)
-		sorted_competitors = sorted(competitors, key=lambda ind: ind.objective_values[0], reverse = True)
-		winner = sorted_competitors[0]
+		#sorted_competitors = sorted(competitors, key=lambda ind: ind.objective_values[0], reverse = True)
+		#sorted_competitors = self.sort_individuals(population = competitors)
+		#winner = sorted_competitors[0]
+		winner = self.get_best_individual(population = competitors)
 		return winner
 		
 	def evaluate_tree(self,root_node,provisional_data=None):
@@ -438,12 +435,19 @@ class DecisionTree_EA: #oblique, binary trees
 	def adapt_to_data(self, labels, data): #missing test_data
 		self.data = pd.DataFrame(data)
 		for i, attribute in enumerate(self.data.columns):
-			self.attributes[attribute] = Attribute(index=i, name=attribute)
-			print("added attribute",attribute)
+			self.add_attribute(name = attribute, index = i)
+			#self.attributes[attribute] = Attribute(index=i, name=attribute)
 		self.output_labels = list(labels)
 		self.unique_output_labels = set(list(labels))
 		self.dataset = data
 		print("unique_output_labels",self.unique_output_labels)
+	
+	def add_attribute(self, name, index):
+		self.attributes[name] = Attribute(index=index, name=name)
+		print("added attribute ",name)
+		
+	def remove_attribute(self,name): #CHANGE: missing
+		pass
 	
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self.parse_tree_r(tree)
@@ -467,6 +471,7 @@ class DecisionTree_EA: #oblique, binary trees
 			comparisons = rule.split(" & ")           #& symbol should not be in the name of any attribute, verify later
 			n_comparisons = len(comparisons)-1
 			for comp_idx,comparison in enumerate(comparisons):
+				#print("parsing comparison ", comparison)
 				if comparison in node.children_names:
 					child_index = node.children_names.index(comparison)
 					child = node.children[child_index]
@@ -492,34 +497,33 @@ class DecisionTree_EA: #oblique, binary trees
 			node.output_label = labels[rule_index]
 		return root_node
 	
-	def parse_comparison(self,comparison,attribute=None):
-		#print("parsing comparison ", comparison)
+	def parse_comparison(self,comparison):
+	
+		#Find the operator in the comparison string
+		for operator_name, operator in self.operators_db.items():
+			operator_string = " " + operator_name + " "
+			operator_string_index = comparison.find(operator_string)
+			if operator_string_index != -1:
+				break
 		
-		#Search for the attribute
-		if attribute is None:
-			for attribute_n,attribute_c in self.attributes.items():
-				str_index = comparison.find(attribute_n)
-				if str_index != -1:
-					attribute = attribute_c
-					break
-		else:
-			str_index = comparison.find(attribute.name)
-			if str_index == -1:
-				print("Error, wrong attribute")
-			
-		if attribute is None:
-			print("Error, no attribute matched")
-			
+		if operator_string_index == -1:
+			print("Error, no operator from the DB was found in the string: ", comparison)
+		
+		#Split the string
+		attribute_string = comparison[: operator_string_index]
+		value_string = comparison[operator_string_index + len(operator_string) :]
+		
 		#Get variables
-		attribute_name = attribute.name
-		remainder = comparison[str_index+len(attribute_name):].strip()
-		operator = self.operators_db[remainder.split(" ")[0]]
-		comparable_value = float(remainder.split(" ")[1]) #all are floats because of this
+		if attribute_string in self.attributes.keys():
+			attribute = self.attributes[attribute_string]
+		else:
+			print("Error, attribute not found: ", attribute_string)
+		comparable_value = float(value_string) #all are floats because of this
 		
 		#Add to the model
 		self.add_operator(operator)
 		comparable_value_index = add_crucial_value(attribute,comparable_value)
-		
+
 		return attribute, operator, comparable_value, comparable_value_index
 		
 	def get_attribute_names(self):
@@ -528,10 +532,20 @@ class DecisionTree_EA: #oblique, binary trees
 	
 	def get_crucial_values(self):
 		at_values = [attribute.crucial_values for attribute in self.attributes.values()]
-		print("In python")
-		print(at_values)
 		return at_values
-		
+	
+	def get_best_individual(self, population = None, objective_index = 0):
+		if population is None:
+			population = self.population
+		sorted_competitors = sort_individuals(self, population = competitors)
+		return sorted_competitors[0]
+	
+	def sort_individuals(self, population = None, objective_index = 0):
+		if population is None:
+			population = self.population
+		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[objective_index], reverse = True) #CHANGE: needs to know if to max or not
+		return sorted_competitors
+	
 def test_get_numbers():
 	return [[1,2],[2,3],[]]
 	#return ["Hola","mundo"]

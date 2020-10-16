@@ -149,7 +149,8 @@ shinyUI(ui = tagList(
                                                          animate = TRUE,
                                                          value = 0.5),
                                              ),
-                                    tabPanel("Set of available rules"),
+                                    tabPanel("Set of available rules",
+                                             dataTableOutput("crucial_values")),
                                     tabPanel("View trees")
                                     )
                         )

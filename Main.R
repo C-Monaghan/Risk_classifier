@@ -21,13 +21,13 @@ default_data<-GermanCredit
 #use_python("C:/Users/fredx/Anaconda3",required=T)
 #source_python("Source_EA.py")
 
-tree.size <- function(tree) {
-  if (is.null(tree)) {
-    return(0)
-  } else {
-    return(1 + tree.size(tree$left) + tree.size(tree$right))
-  }
-}
+# tree.size <- function(tree) {
+#   if (is.null(tree)) {
+#     return(0)
+#   } else {
+#     return(1 + tree.size(tree$left) + tree.size(tree$right))
+#   }
+# }
 
 # The main function
 Classifier<-function(default_data,choose_regression = TRUE,selection=100){
@@ -114,7 +114,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   # Storing all the combination of trees
   Forest = list()
-  for(i in 1:selection) {
+  for(i in 1:selection) { #CHANGE: this is not random
     RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE)
     Forest[[i]] = RPI
   }
