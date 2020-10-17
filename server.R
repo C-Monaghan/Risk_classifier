@@ -13,15 +13,18 @@ default_data<-GermanCredit
 use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
 source_python("Source_EA.py")
 
+PDT <- DecisionTree_EA(tournament_size = 5,
+                       crossover_rate = 0.6,
+                       mutation_rate = 0.3,
+                       elitism_rate = 0.1,
+                       hall_of_fame_size = 3)
 
-initiate_ea <- function(forest,dataset, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
-  source_python("Source_EA.py") #temp
-  PDT <- DecisionTree_EA(tournament_size = tournament_size,
-                         crossover_rate = crossover_rate,
-                         mutation_rate = mutation_rate,
-                         elitism_rate = 0.1,
-                         hall_of_fame_size = 3)
+initiate_ea <- function(forest,dataset) {
+  #source_python("Source_EA.py") #temp
+  
   PDT$'adapt_to_data'(labels = dataset$Class, data=dataset) #CHANGE: hardcoded to Class
+  print(PDT$'generation')
+  print(paste0(PDT$'generation'))
   
   bad_trees_count=0
   for (Ctree in forest) {
@@ -237,9 +240,30 @@ observeEvent(input$button1, {
   )
 })
 
-observeEvent(input$evolve, {
+observeEvent(input$seed, {
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Reduced_data)
   output$crucial_values <- renderDataTable(crucial_values)
+})
+
+observeEvent(input$evolve, {
+  evolution <- data.frame(generation=integer(),
+                   best_value=double(), 
+                   mean_value=double(), 
+                   stringsAsFactors=FALSE)
+  print(input$generations)
+  PDT$'evolve'(input$generations)
+  current_best_valule <- PDT$'get_best_value_for_objective'()
+  current_mean_value <- PDT$'get_population_mean_for_objective'()
+  print(paste0("gen:", PDT$'generation', ", best:",current_best_valule, ", mean:", current_best_valule))
+  
+  # for (g in input$generations){
+  #   PDT$'evolve'()
+  #   current_best_valule <- PDT$'get_best_value_for_objective'()
+  #   current_mean_value <- PDT$'get_population_mean_for_objective'()
+  #   print(paste0("gen:", PDT$'generation', current_best_valule, current_best_valule))
+  # }
+    
+  
 })
 
 output$res<-renderTable({

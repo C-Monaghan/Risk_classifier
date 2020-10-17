@@ -20,6 +20,7 @@ import math
 from inspect import signature
 import pandas as pd
 import copy
+import statistics as st
 
 def get_arity(operator):
 	"""
@@ -208,7 +209,7 @@ class DT_Node:
 		else:
 			return max([child.my_depth(new_depth) for child in self.children])
 
-	def node_already_in_branch(self, node=None):
+	def node_already_in_branch(self, node=None): #missing self.__eq__()
 		if self.parent is None:
 			return False
 		else:
@@ -243,6 +244,8 @@ class DT_Node:
 			else:
 				return "Node:" + self.attribute.name + ",op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",subtree nodes:" + str(len(self.get_subtree_nodes(include_terminals=False)))  + ",visits:" + str(self.visits_count)
 
+	#def __eq__(self, other):
+
 class DecisionTree_EA: #oblique, binary trees
 	def __init__(self, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3):
 			
@@ -266,7 +269,10 @@ class DecisionTree_EA: #oblique, binary trees
 		self.crossover_rate = crossover_rate
 		self.mutation_rate = mutation_rate
 		self.elitism_rate = elitism_rate
-										
+		self.crossovers = 0
+		self.mutations = 0
+		self.elites = 0
+		
 	def add_operator(self,operator): #operators with compatibility to certain attributes?
 		if operator not in self.operators:
 			self.operators.append(operator)
@@ -337,7 +343,7 @@ class DecisionTree_EA: #oblique, binary trees
 	
 	def generate_random_terminal(self):
 		terminal_node = DT_Node()
-		self.output_label = rd.choice(list(self.unique_output_labels))
+		terminal_node.output_label = rd.choice(list(self.unique_output_labels))
 		return terminal_node
 
 	def generate_random_tree(self,max_depth=3, method = "Grow"): #missing adding names (might not be needed)
@@ -354,45 +360,44 @@ class DecisionTree_EA: #oblique, binary trees
 					root.add_child(name=None,child=child)
 		return root
 
-	def evolve(self, generations = 1): #unfinished, also missing verification of existent nodes
+	def evolve(self, generations = 1): #unfinished, also missing verification of repeated nodes
 		for i_gen in range(int(generations)):
+			self._run_generation()
+	
+	def _run_generation(self):
+		"""
+		Runs a single generation of evolution
+		Evaluates the population if generation == 0, otherwise assumes that the population is already evaluated
+		"""
+		if self.generation == 0:
 			self.evaluate_population()
 			pop_size = len(self.population)
-			crossovers = int(pop_size * self.crossover_rate / 2)
-			mutations = int(pop_size * self.mutation_rate)
-			elites = int(pop_size * self.elitism_rate)
-			newgen_pop = []
-			for i in range(crossovers):
-				parent1 = self.tournament_selection()
-				parent2 = self.tournament_selection()
-				newgen_pop.extend(self.one_point_crossover(parent1, parent2))
-			for i in range(mutations):
-				parent = self.tournament_selection()
-				newgen_pop.append(self.mutate(parent))
-			#sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
-			sorted_competitors = self.sort_individuals()
+			self.crossovers = int(pop_size * self.crossover_rate / 2)
+			self.mutations = int(pop_size * self.mutation_rate)
+			self.elites = int(pop_size * self.elitism_rate)
 			
-			print("Gen ", str(self.generation), "Best so far:", str(sorted_competitors[0].objective_values[0]),str(sorted_competitors[1].objective_values[0]))
-			for i in range(10):
-
-				print(str(sorted_competitors[i].objective_values[0]),str(sorted_competitors[i].genotype))
-
-			if elites > 0: #missing hall of fame
-				newgen_pop.extend(sorted_competitors[:elites])
-			self.population = newgen_pop
-			self.generation = self.generation + 1
+		self.generation = self.generation + 1
+		newgen_pop = []
+		for i in range(self.crossovers):
+			parent1 = self.tournament_selection()
+			parent2 = self.tournament_selection()
+			newgen_pop.extend(self.one_point_crossover(parent1, parent2))
+		for i in range(self.mutations):
+			parent = self.tournament_selection()
+			newgen_pop.append(self.mutate(parent))
+		sorted_competitors = self._sort_individuals()
+		newgen_pop.extend(sorted_competitors[:self.elites])
+		self.population = newgen_pop
 		self.evaluate_population()
-		winner = self.get_best_individual()
-		#sorted_competitors = sorted(self.population, key=lambda ind: ind.objective_values[0], reverse = True)
-		#sorted_competitors = self.sort_individuals()
-		print("Gen ", str(self.generation), "Best so far:", winner.objective_values[0])
-		return winner
+	
+	def get_population_mean_for_objective(self, population = None, objective_index = 0):
+		if population is None:
+			population = self.population
+		mean = sum([ind.objective_values[objective_index] for ind in self.population])/len(self.population)
+		return mean
 	
 	def tournament_selection(self): #population could be sorted before to avoid repetition
 		competitors = rd.sample(self.population, self.tournament_size)
-		#sorted_competitors = sorted(competitors, key=lambda ind: ind.objective_values[0], reverse = True)
-		#sorted_competitors = self.sort_individuals(population = competitors)
-		#winner = sorted_competitors[0]
 		winner = self.get_best_individual(population = competitors)
 		return winner
 		
@@ -422,7 +427,7 @@ class DecisionTree_EA: #oblique, binary trees
 		accuracy = corrects / (i+1)
 		return accuracy
 				
-	def evaluate_population(self):
+	def evaluate_population(self): #CHANGE: needs many
 		#get individual objective values:
 		for ind in self.population:
 			labels = self.evaluate_tree(ind.genotype)
@@ -450,7 +455,7 @@ class DecisionTree_EA: #oblique, binary trees
 		pass
 	
 	def insert_r_tree_to_population(self, tree):
-		parsed_tree = self.parse_tree_r(tree)
+		parsed_tree = self._parse_tree_r(tree)
 		self.insert_tree_to_population(parsed_tree)
 	
 	def insert_tree_to_population(self,tree):
@@ -458,7 +463,7 @@ class DecisionTree_EA: #oblique, binary trees
 								genotype = tree)
 		self.population.append(individual)
 	
-	def parse_tree_r(self, tree):
+	def _parse_tree_r(self, tree):
 		pd_tree = pd.DataFrame(tree)
 		labels = pd_tree["RHS"]
 		rules = pd_tree["LHS"]
@@ -484,7 +489,7 @@ class DecisionTree_EA: #oblique, binary trees
 						#	child = node.add_child(name=comparison)
 						#pass
 					else:
-						attribute, operator, comparable_value, comparable_value_index = self.parse_comparison(comparison)
+						attribute, operator, comparable_value, comparable_value_index = self._parse_comparison(comparison)
 						node.update(attribute=attribute,
 									comparable_value_index=comparable_value_index,
 									comparable_value=comparable_value,
@@ -497,9 +502,9 @@ class DecisionTree_EA: #oblique, binary trees
 			node.output_label = labels[rule_index]
 		return root_node
 	
-	def parse_comparison(self,comparison):
+	def _parse_comparison(self,comparison):
 	
-		#Find the operator in the comparison string
+		#Find the operator in the comparison string, can be made more robust
 		for operator_name, operator in self.operators_db.items():
 			operator_string = " " + operator_name + " "
 			operator_string_index = comparison.find(operator_string)
@@ -507,7 +512,7 @@ class DecisionTree_EA: #oblique, binary trees
 				break
 		
 		if operator_string_index == -1:
-			print("Error, no operator from the DB was found in the string: ", comparison)
+			print("Error, no operator from the DB was found in the rule string: ", comparison)
 		
 		#Split the string
 		attribute_string = comparison[: operator_string_index]
@@ -537,10 +542,16 @@ class DecisionTree_EA: #oblique, binary trees
 	def get_best_individual(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
-		sorted_competitors = sort_individuals(self, population = competitors)
+		sorted_competitors = self._sort_individuals(population = population)
 		return sorted_competitors[0]
 	
-	def sort_individuals(self, population = None, objective_index = 0):
+	def get_best_value_for_objective(self, population = None, objective_index = 0):
+		if population is None:
+			population = self.population
+		winner = self.get_best_individual(population=population, objective_index = objective_index)
+		return winner.objective_values[objective_index]
+	
+	def _sort_individuals(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
 		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[objective_index], reverse = True) #CHANGE: needs to know if to max or not
