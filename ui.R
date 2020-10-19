@@ -1,6 +1,6 @@
 source("Main.R")
 
-# All the libraries required for th shiny app 
+# All the libraries required for th shiny app
 library(shiny)
 library(shinyBS)
 library(shinythemes)
@@ -18,14 +18,14 @@ shinyUI(ui = tagList(
     "))),
   useShinyjs(),
   withMathJax(),
-  
+
   navbarPage(
 
     theme = shinytheme("slate"),  # <--- To use a theme, uncomment this
     strong("MI based classifier"), # Main title name
 
-    
-    
+
+
     # Home --------------------------------------------------------------------
     tabPanel("Home",
              column(12, align="center",
@@ -35,29 +35,29 @@ shinyUI(ui = tagList(
                     h4(strong("Note: For more help on usage, please look into the 'Guide' tab and 'About us' in detail."))
              )
     ),
-    
+
     # Guides ------------------------------------------------------------------
-    tabPanel("Guides", 
+    tabPanel("Guides",
              br(),
              bsCollapse(id = "Machine_Learning_based_Classifier_desc", open = "Machine Learning based Classifier Usage Guide",
                         bsCollapsePanel("Machine Learning based Classifier Usage Guide",
-                                        
+
                                         includeHTML("Machine_Learning_based_Classifier_desc_ug.html"),
                                         style = "primary"),
                         bsCollapsePanel("Machine Learning based Classifier Conceptual Explanation",
-                                        
+
                                         includeHTML("Machine_Learning_based_Classifier_desc_ce.html"),
                                         style = "info"),
                         bsCollapsePanel("Machine Learning based Classifier Technical Details",
-                                        
+
                                         includeHTML("Machine_Learning_based_Classifier_desc_td.html"),
                                         style = "info")
              )
-    ), 
-    
+    ),
+
     # Dataset Input ----------------------------------------------------------------
     tabPanel("Dataset",  sidebarPanel(width = 3,
-                                      
+
                                       fileInput("sample_file", h4("File input:", bsButton("main_data_tooltip", label = "",
                                                                                           icon = icon("question"), size = "extra-small")),
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
@@ -81,29 +81,29 @@ shinyUI(ui = tagList(
                                                    'Double Quote'),
                                       bsPopover("main_data_tooltip", title="",
                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
-                                                trigger = "hover"), 
-                                      
+                                                trigger = "hover"),
+
                                       h4("Please Select Input Values:",align="centre"),
                                       # Input: Variable Selection Method ----
                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression")),
-                                  
-                                      
+
+
                                       # Input: No. of Decision Trees ----
 
                                       sliderInput("trees", "Step 2: How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                  min = 20, max=800,
                                                  step = 4,animate = TRUE,value = 100),
-                                      
+
                                       # Input: Which Decision Trees to be viewed ----
                                       sliderInput("viewtree", "Step 3: Which Decision Tree the user wants to view with its various associative results?",
                                                   min = 1, max=800,
                                                   step = 1,animate = TRUE,value = 1),
-                                      
+
                                       # Downloading the file type
                                       h5("3.Select the type of plot to be downloaded:",align="centre"),
                                       radioButtons("filetype","Select the file type",choices = list("png","pdf"))
-                                      
-                                      
+
+
     ),  # Main panel for displaying outputs ----
     mainPanel(
       tabsetPanel(
@@ -115,64 +115,43 @@ shinyUI(ui = tagList(
       )
        )
     ),
-    
+
     # Evolutionary Algorithm ----------------------------------------------------------------
-    tabPanel("Evolutionary Algorithm", 
+    tabPanel("Evolutionary Algorithm",
               sidebarPanel(width = 3,
-                          sliderInput("generations", 
+                          sliderInput("generations",
                                       "Generations",
-                                      min = 10, 
+                                      min = 1,
                                       max=200,
                                       step = 10,
                                       animate = TRUE,
-                                      value = 10),
-                          actionButton("seed", 
+                                      value = 1),
+                          actionButton("seed",
                                        "Seed population and rules"),
-                          actionButton("evolve", 
-                                       "Start evolution"),
-                          actionButton("stop", 
-                                       "Stop evolution")
+                          actionButton("evolve",
+                                       "Evolve"),
+                          actionButton("b_update_progress",
+                                       "Update progress")
                           ),
               mainPanel(tabsetPanel(type="tab",
-                                    # tabPanel("Hyperparameters",
-                                    #          sliderInput("tournament_size", 
-                                    #                      "Tournament size",
-                                    #                      min = 1, 
-                                    #                      max=10,
-                                    #                      step = 1,
-                                    #                      animate = TRUE,
-                                    #                      value = 3),
-                                    #          sliderInput("mutation_rate", 
-                                    #                      "Mutation rate",
-                                    #                      min = 0, 
-                                    #                      max=1,
-                                    #                      step = 0.05,
-                                    #                      animate = TRUE,
-                                    #                      value = 0.5),
-                                    #          sliderInput("crossover_rate", 
-                                    #                      "Crossover rate",
-                                    #                      min = 0, 
-                                    #                      max=1,
-                                    #                      step = 0.05,
-                                    #                      animate = TRUE,
-                                    #                      value = 0.5),
-                                    #          ),
-                                    tabPanel("Set of available rules",
+                                    tabPanel("Set of available splits",
                                              dataTableOutput("crucial_values")),
+                                    tabPanel("Progress",
+                                             plotOutput("evolution_progress",  width = "100%")),
                                     tabPanel("View trees")
                                     )
                         )
-             
+
             ),
-    
-    
-    
+
+
+
     # About Us ----------------------------------------------------------------
     tabPanel("About Us",
-             
-            
-             
-             
+
+
+
+
     )
-    
+
   )))

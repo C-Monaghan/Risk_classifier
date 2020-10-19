@@ -30,7 +30,7 @@ def get_arity(operator):
 	sig = signature(operator)
 	arity = len(sig.parameters)
 	return arity
-	
+
 def add_crucial_value(attribute,value):
 	"""
 	crucial values are the relevant values that are used to split the data in the trees
@@ -44,8 +44,8 @@ def add_crucial_value(attribute,value):
 		attribute.crucial_values = attribute.crucial_values + [value]
 		print("Added crucial value ", str(value), " to attribute ", attribute.name, ". All values:", str(attribute.crucial_values))
 		return index
-	
-		
+
+
 class Objective:
 	def __init__(self,
 		to_max = True,
@@ -55,18 +55,18 @@ class Objective:
 		self.to_max = to_max
 		self.best_known_value = best_known_value
 		self.worst_known_value = worst_known_value
-	
+
 	def set_best_known_value(value):
 		self.best_known_value = value
-	
+
 	def set_worst_known_value(value):
 		self.worst_known_value = value
-		
+
 class Individual: #missing __lt__ and __eq__
 	def __init__(
 			self,
 			generation_of_creation,
-			genotype, 
+			genotype,
 			phenotype = None,
 			objective_values = [0],
 			n_dominators = None,                 #used in MOEA, pareto dominance
@@ -84,10 +84,10 @@ class Individual: #missing __lt__ and __eq__
 		self.objective_values = objective_values
 		self.local_crowding_distance = local_crowding_distance
 		self.non_domination_rank = non_domination_rank
-	
+
 	def __str__(self):
 		return "Genotype:" + str(self.genotype)
-	
+
 class Attribute:
 	def __init__(self,
 			index,                        #index of the attribute in the dataset
@@ -99,17 +99,30 @@ class Attribute:
 		"""
 		s
 		"""
-	
 		self.index = index
 		self.name = name
 		self.type = type
 		self.all_values = all_values
 		self.crucial_values = crucial_values
 		self.available_values = available_values
-	
+
+	def add_crucial_value(self, value):
+		"""
+		crucial values are the relevant values that are used to split the data in the trees
+		returns: the index in the attribute of the newly added value
+		"""
+		if value in self.crucial_values:
+			index = self.crucial_values.index(value)
+			return index
+		else:
+			index = len(self.crucial_values)
+			self.crucial_values = self.crucial_values + [value]
+			print("Added crucial value ", str(value), " to attribute ", self.name, ". All values:", str(self.crucial_values))
+			return index
+
 	def __str__(self):
-		return "Attribute " + self.name + ",idx:" + str(self.index) + ",n_crucial_values:" + str(len(self.crucial_values))  
-	
+		return "Attribute " + self.name + ",idx:" + str(self.index) + ",n_crucial_values:" + str(len(self.crucial_values))
+
 class DT_Node:
 	def __init__(self, parent = None):
 		"""
@@ -126,14 +139,14 @@ class DT_Node:
 		self.comparable_value_index = None
 		self.visits_count = 0
 		self.gini_index = None
-	
+
 	def update(self,attribute,comparable_value_index,comparable_value,operator): #only used when parsing trees from R
 		self.updated = True
 		self.attribute = attribute
 		self.comparable_value = comparable_value #float(self.attribute.crucial_values[comparable_value_index]) #all are floats rn
 		self.comparable_value_index = comparable_value_index
 		self.operator = operator
-	
+
 	def add_child(self,name,child,index=None):
 		child.parent = self
 		if index is None:
@@ -144,16 +157,16 @@ class DT_Node:
 			self.children_names[index] = name
 		#print("Added child named ", name , ",new child count", str(len(self.children)))
 		return child
-		
+
 	def add_new_child(self, name):
 		empty_node = DT_Node()
 		child = self.add_child(name=name,child=empty_node, index = None)
 		return child
-	
+
 	def replace_child(self, new_child, old_child):
 		index = self.children.index(old_child)
 		self.add_child(name = self.children_names[index], child = new_child, index = index)
-	
+
 	def evaluate(self,data_row):
 		self.visits_count = self.visits_count + 1
 		if self.output_label is None:
@@ -162,14 +175,14 @@ class DT_Node:
 			except:
 				print("Error in evaluation")
 				return None
-			
+
 			if comparison == True:
 				#print("Going to child", self.children_names[0])
 				return self.children[0].evaluate(data_row)
 			else:
 				#print("Going to child", self.children_names[1])
 				return self.children[1].evaluate(data_row)
-			
+
 		else:
 			#print("Output:",self.output_label)
 			return self.output_label
@@ -230,14 +243,14 @@ class DT_Node:
 		the_copy.operator = self.operator
 		the_copy.comparable_value = self.comparable_value
 		the_copy.comparable_value_index = self.comparable_value_index
-		
+
 		for child in self.children:
 			copy_child = child.copy(parent=the_copy)
 			the_copy.children.append(copy_child)
 			#the_copy.add_child(name=self.children_names[child_index], child=copy_child)
-				
+
 		return the_copy
-	
+
 	def __str__(self):
 			if self.attribute is None:
 				return "Node: terminal,ol:" + str(self.output_label) + ",visits:" + str(self.visits_count)
@@ -248,7 +261,7 @@ class DT_Node:
 
 class DecisionTree_EA: #oblique, binary trees
 	def __init__(self, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3):
-			
+
 		self.output_labels = []
 		self.current_generation = 0
 		self.unique_output_labels = []
@@ -272,16 +285,14 @@ class DecisionTree_EA: #oblique, binary trees
 		self.crossovers = 0
 		self.mutations = 0
 		self.elites = 0
-		
+
 	def add_operator(self,operator): #operators with compatibility to certain attributes?
 		if operator not in self.operators:
 			self.operators.append(operator)
 			print("Added new operator:",str(operator))
-	
-	def add_objective(self,
-			to_max = True,
-			best_known_value = None,
-			worst_known_value = None):
+
+	def add_objective(self, to_max = True, best_known_value = None, worst_known_value = None):
+
 		self.objectives[self.n_objectives] = Objective(to_max = to_max,
 													best_known_value = best_known_value,
 													worst_known_value = worst_known_value)
@@ -293,10 +304,10 @@ class DecisionTree_EA: #oblique, binary trees
 
 		copy1 = tree1.copy()
 		copy2 = tree2.copy()
-		
+
 		nodes1 = copy1.get_subtree_nodes(include_self = False, include_terminals = False) #no root node included
 		nodes2 = copy2.get_subtree_nodes(include_self = False, include_terminals = False)
-		
+
 		node1 = rd.choice(nodes1)
 		node2 = rd.choice(nodes2)
 
@@ -309,10 +320,10 @@ class DecisionTree_EA: #oblique, binary trees
 		new_individual2 = Individual(generation_of_creation = self.generation, genotype = copy2)
 
 		return [new_individual1, new_individual2]
-		
+
 	def generate_name_for_node(self): #missing, right now names are only relevant when parsing trees from R
 		pass
-		
+
 	def mutate(self, individual):#missing, new nodes have no names for their children
 		tree = individual.genotype
 		tree_copy = tree.copy()
@@ -328,7 +339,7 @@ class DecisionTree_EA: #oblique, binary trees
 		#print("acc_new",str(self.calculate_accuracy(self.evaluate_tree(tree_copy))))
 		new_individual = Individual(generation_of_creation = self.generation, genotype = tree_copy)
 		return new_individual
-	
+
 	def generate_random_node(self):
 		node = DT_Node()
 		node.updated = True #might not be needed
@@ -338,9 +349,9 @@ class DecisionTree_EA: #oblique, binary trees
 		node.comparable_value_index = rd.choice(range(len(node.attribute.crucial_values))) #can be optimised
 		node.comparable_value = node.attribute.crucial_values[node.comparable_value_index]
 		#else:
-			
+
 		return node
-	
+
 	def generate_random_terminal(self):
 		terminal_node = DT_Node()
 		terminal_node.output_label = rd.choice(list(self.unique_output_labels))
@@ -363,7 +374,7 @@ class DecisionTree_EA: #oblique, binary trees
 	def evolve(self, generations = 1): #unfinished, also missing verification of repeated nodes
 		for i_gen in range(int(generations)):
 			self._run_generation()
-	
+
 	def _run_generation(self):
 		"""
 		Runs a single generation of evolution
@@ -375,7 +386,7 @@ class DecisionTree_EA: #oblique, binary trees
 			self.crossovers = int(pop_size * self.crossover_rate / 2)
 			self.mutations = int(pop_size * self.mutation_rate)
 			self.elites = int(pop_size * self.elitism_rate)
-			
+
 		self.generation = self.generation + 1
 		newgen_pop = []
 		for i in range(self.crossovers):
@@ -389,18 +400,18 @@ class DecisionTree_EA: #oblique, binary trees
 		newgen_pop.extend(sorted_competitors[:self.elites])
 		self.population = newgen_pop
 		self.evaluate_population()
-	
+
 	def get_population_mean_for_objective(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
 		mean = sum([ind.objective_values[objective_index] for ind in self.population])/len(self.population)
 		return mean
-	
+
 	def tournament_selection(self): #population could be sorted before to avoid repetition
 		competitors = rd.sample(self.population, self.tournament_size)
 		winner = self.get_best_individual(population = competitors)
 		return winner
-		
+
 	def evaluate_tree(self,root_node,provisional_data=None):
 		"""
 		return: list of output labels
@@ -414,11 +425,11 @@ class DecisionTree_EA: #oblique, binary trees
 		tree_family = root_node.get_subtree_nodes()
 		for node in tree_family:
 			node.visits_count = 0
-		
+
 		for index, row in data.iterrows():
 			output_array.append(root_node.evaluate(row))
 		return output_array
-	
+
 	def calculate_accuracy(self, model_output_labels):
 		corrects = 0
 		for i,label in enumerate(self.output_labels):
@@ -426,7 +437,7 @@ class DecisionTree_EA: #oblique, binary trees
 				corrects = corrects + 1
 		accuracy = corrects / (i+1)
 		return accuracy
-				
+
 	def evaluate_population(self): #CHANGE: needs many
 		#get individual objective values:
 		for ind in self.population:
@@ -436,7 +447,7 @@ class DecisionTree_EA: #oblique, binary trees
 
 			ind.objective_values = [accuracy]
 			#ind.objective_values[0] = accuracy how come this didn´t work
-			
+
 	def adapt_to_data(self, labels, data): #missing test_data
 		self.data = pd.DataFrame(data)
 		for i, attribute in enumerate(self.data.columns):
@@ -446,23 +457,23 @@ class DecisionTree_EA: #oblique, binary trees
 		self.unique_output_labels = set(list(labels))
 		self.dataset = data
 		print("unique_output_labels",self.unique_output_labels)
-	
+
 	def add_attribute(self, name, index):
 		self.attributes[name] = Attribute(index=index, name=name)
 		print("added attribute ",name)
-		
+
 	def remove_attribute(self,name): #CHANGE: missing
 		pass
-	
+
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self._parse_tree_r(tree)
 		self.insert_tree_to_population(parsed_tree)
-	
+
 	def insert_tree_to_population(self,tree):
 		individual = Individual(generation_of_creation = self.current_generation,
 								genotype = tree)
 		self.population.append(individual)
-	
+
 	def _parse_tree_r(self, tree):
 		pd_tree = pd.DataFrame(tree)
 		labels = pd_tree["RHS"]
@@ -501,112 +512,68 @@ class DecisionTree_EA: #oblique, binary trees
 			#print("rule_index",rule_index)
 			node.output_label = labels[rule_index]
 		return root_node
-	
+
 	def _parse_comparison(self,comparison):
-	
+
 		#Find the operator in the comparison string, can be made more robust
 		for operator_name, operator in self.operators_db.items():
 			operator_string = " " + operator_name + " "
 			operator_string_index = comparison.find(operator_string)
 			if operator_string_index != -1:
 				break
-		
+
 		if operator_string_index == -1:
 			print("Error, no operator from the DB was found in the rule string: ", comparison)
-		
+
 		#Split the string
 		attribute_string = comparison[: operator_string_index]
 		value_string = comparison[operator_string_index + len(operator_string) :]
-		
+
 		#Get variables
 		if attribute_string in self.attributes.keys():
 			attribute = self.attributes[attribute_string]
 		else:
 			print("Error, attribute not found: ", attribute_string)
 		comparable_value = float(value_string) #all are floats because of this
-		
+
 		#Add to the model
 		self.add_operator(operator)
-		comparable_value_index = add_crucial_value(attribute,comparable_value)
+		comparable_value_index = attribute.add_crucial_value(comparable_value)
 
 		return attribute, operator, comparable_value, comparable_value_index
-		
+
 	def get_attribute_names(self):
 		at_names = [attribute.name for attribute in self.attributes.values()]
 		return at_names
-	
+
 	def get_crucial_values(self):
 		at_values = [attribute.crucial_values for attribute in self.attributes.values()]
 		return at_values
-	
+
 	def get_best_individual(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
 		sorted_competitors = self._sort_individuals(population = population)
 		return sorted_competitors[0]
-	
+
 	def get_best_value_for_objective(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
 		winner = self.get_best_individual(population=population, objective_index = objective_index)
 		return winner.objective_values[objective_index]
-	
+
 	def _sort_individuals(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
 		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[objective_index], reverse = True) #CHANGE: needs to know if to max or not
 		return sorted_competitors
-	
+
 def test_get_numbers():
 	return [[1,2],[2,3],[]]
 	#return ["Hola","mundo"]
-	
+
 def test_get_names():
 	#return [[1,2],[2,3]]
 	return ["Hola","mundo"]
-"""
-#interpretation
-C<-Classifier(default_data,1,100)
-use_python("C:/Users/fredx/Anaconda3",required=T)
 
-
-source_python("Source_EA.py")
-#Creates the Python class
-PDT <- DecisionTree_EA(tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3)
-#Gives the data to python, python can relate now to the attributes and output_labels
-PDT$'adapt_to_data'(labels = C$Data$Class, data=C$Data)
-#Initialisation of the population with trees from R:
-for (Ctree in C$Trees) {
-  rules <- tidyRules(Ctree)
-  PDT$'insert_r_tree_to_population'(rules)
-}
-#Logs: print the poll of crucial values for each attribute
-for (att in PDT$'attributes'){
-  print(att$'name')
-  print(att$'crucial_values')
-}
-#Genetic operators test
-PDT$'evaluate_population'()
-ind1 = PDT$'tournament_selection'()
-print(ind1$'genotype')
-ind2 = PDT$'tournament_selection'()
-print(ind2$'genotype')
-crossovers = PDT$'one_point_crossover'(ind1,ind2)
-t3 = ind2$'genotype'$'copy'()
-print(t3)
-ind4 = PDT$'mutate'(ind1)
-print(ind4$'genotype')
-ev_t1 = PDT$'evaluate_tree'(ind1$'genotype')
-print(ev_t1)
-ev_t2 = PDT$'evaluate_tree'(ind2$'genotype')
-print(ev_t2)
-ev_t3 = PDT$'evaluate_tree'(t3)
-print(ev_t3)
-ev_t4 = PDT$'evaluate_tree'(ind4$'genotype')
-print(ev_t4)
-#print(ind4$'genotype'$'visits_count')
-
-#Evolution
-winner <- PDT$evolve(30)
-print(winner$'genotype')
-"""
+#Version control: 13:49 19/10/20
