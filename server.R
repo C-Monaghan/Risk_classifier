@@ -10,8 +10,8 @@ library(reticulate)
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
 
-use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-source_python("Source_EA.py")
+# use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+# source_python("Source_EA.py")
 
 PDT <- DecisionTree_EA(tournament_size = 5,
                        crossover_rate = 0.6,
@@ -150,8 +150,11 @@ observeEvent(input$button, {
 
 Main<-reactive({
   input$button
-Classifier(original_data(), method(),trees())
-})
+  isolate(if(global$response==T){
+Classifier(original_data(),  method(),trees())
+  } else  return(NULL)
+  )
+    })
 
 #classifier_outputs <- Main()
 
@@ -193,7 +196,11 @@ escape = FALSE)
 
 
 output$colred <- renderTable({
-  colnames(Main()$Reduced_data)
+  input$button
+  isolate(if(global$response==T){
+ colnames(Main()$Reduced_data)
+  } else  return(NULL)
+  )
 }, caption=paste("Reduced variables in the dataset"),
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
@@ -240,9 +247,25 @@ observeEvent(input$button1, {
   )
 })
 
+<<<<<<< HEAD
 observeEvent(input$seed, {
+=======
+
+observeEvent(input$evolve, {
+>>>>>>> a5a52e61730548f1c0abb202d8e32e0d326ba167
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Reduced_data)
-  output$crucial_values <- renderDataTable(crucial_values)
+  output$crucial_values <- renderDataTable(crucial_values)})
+
+
+Values <- reactive({
+  
+  data.frame(
+    Name = c("Accuracy of the Tree",
+             "Gini Index","AUROC"),
+    Value = as.character(c(Main()$Accuracy[[viewtree()]], Main()$Gini_Index[[viewtree()]],
+                           Main()$AUROC[[viewtree()]])),
+    stringsAsFactors = FALSE)
+  
 })
 
 observeEvent(input$evolve, {
@@ -268,30 +291,24 @@ observeEvent(input$evolve, {
 
 output$res<-renderTable({
   input$button1
-  Main()$Accuracy[[viewtree()]]
-  # Main()$AUROC[[viewtree()]]
-  # Main()$Gini_Index[[viewtree()]]
+  isolate(if(global$response==T){
+    Values()
+  }
+  else  return(NULL)
+  )
 })
 
-output$down<-downloadHandler(
-  #Specify filename
-  filename = function(){
-    paste("DecisionTree",input$filetype,sep=".")
+#~~~~ Download the reduced dataset
+output$down <- downloadHandler(
+  filename = function() {
+    paste("ReducedData.csv", sep = "")
   },
-  content = function(file){
-    #open the device <-png(),pdf()
-    # create/write the plot
-    #close the device
-    if(input$filetype=="png")
-      png(file)
-    else
-      pdf(file)
-    Main()$Reduced_data
-    dev.off()
+  content = function(file) {
+    write.csv(Main()$Reduced_data, file, row.names = FALSE)
   }
 )
 
-
+#~~~~ Download the decision tree plot
 output$down1<-downloadHandler(
   #Specify filename
   filename = function(){

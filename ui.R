@@ -61,7 +61,13 @@ shinyUI(ui = tagList(
                                       fileInput("sample_file", h4("File input:", bsButton("main_data_tooltip", label = "",
                                                                                           icon = icon("question"), size = "extra-small")),
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
-                                                placeholder = "Enter Your Data Here"),tags$hr(),
+                                                placeholder = "Enter Your Data Here"),
+                                          bsPopover("main_data_tooltip", title="File format",
+                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as Class specifying the variable to be estimated.",
+                                                 trigger = "hover"),
+                                      #tags$hr(),
+                                      h4(helpText("Is there a header in the data?")),
+
                                       checkboxInput('header', 'Header', TRUE),
                                       radioButtons('sep', 'Separator',
                                                    c(Comma=',',
@@ -77,7 +83,7 @@ shinyUI(ui = tagList(
                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as 'Class' specifying the variable to be estimated",
                                                 trigger = "hover"), 
                                       
-                                      h5("Please Select Input Values:",align="centre"),
+                                      h4("Please Select Input Values:",align="centre"),
                                       # Input: Variable Selection Method ----
                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression")),
                                   
@@ -104,7 +110,7 @@ shinyUI(ui = tagList(
         type="tab",
         tabPanel(" View Input Dataset ",dataTableOutput("dataset"), tableOutput("col")),
         tabPanel("User Selection Input",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
-        tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data"),dataTableOutput("Reduced_data"), tableOutput("colred")),
+        tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data in .csv"),dataTableOutput("Reduced_data"), tableOutput("colred")),
         tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Calculate"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
       )
        )
