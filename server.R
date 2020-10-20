@@ -47,6 +47,7 @@ initiate_ea <- function(forest,dataset) {
     random_tree = PDT$'generate_random_tree'()
     PDT$'insert_tree_to_population'(random_tree)
   }
+  PDT$'add_objective'(objective_name = "accuracy") #new
 
   names <- PDT$'get_attribute_names'()
   values <- PDT$'get_crucial_values'()
@@ -294,7 +295,7 @@ observeEvent(input$b_update_progress, {
 
 output$evolution_progress <- renderPlot({
   #plot(x = progress_values$gens, y=progress_values$best_values, type = "o", ylim = c(0,1))
-  plot(x=progress_values$gens, y=progress_values$best_values, type="o", lty=1, ylim=c(0,1),
+  plot(x=progress_values$gens, y=progress_values$best_values, type="o", lty=1, ylim=c(0.5,1),
        axes=F, bty="n", xaxs="i", yaxs="i", main="Accuracy progress",
        xlab="Generation", ylab="Accuracy")
   

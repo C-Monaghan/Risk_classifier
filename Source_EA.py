@@ -22,7 +22,7 @@ import pandas as pd
 import copy
 import statistics as st
 
-def get_arity(operator):
+def get_arity(operator): #currrently not needed
 	"""
 	Returns the arity of the method, operator or funtion as an int
 	:param operator: is a method, operator or funtion
@@ -31,36 +31,19 @@ def get_arity(operator):
 	arity = len(sig.parameters)
 	return arity
 
-def add_crucial_value(attribute,value):
-	"""
-	crucial values are the relevant values that are used to split the data in the trees
-	returns: the index in the attribute of the newly added value
-	"""
-	if value in attribute.crucial_values:
-		index = attribute.crucial_values.index(value)
-		return index
-	else:
-		index = len(attribute.crucial_values)
-		attribute.crucial_values = attribute.crucial_values + [value]
-		print("Added crucial value ", str(value), " to attribute ", attribute.name, ". All values:", str(attribute.crucial_values))
-		return index
-
-
 class Objective:
-	def __init__(self,
-		to_max = True,
-		best_known_value = None,
-		worst_known_value = None):
+	def __init__(self, objective_name, index, to_max = True, best = None, worst = None):
+		self.objective_name = objective_name
 		self.index = index
 		self.to_max = to_max
-		self.best_known_value = best_known_value
-		self.worst_known_value = worst_known_value
+		self.best = best
+		self.worst = worst
 
-	def set_best_known_value(value):
-		self.best_known_value = value
+	def update_best(value):
+		self.best = value
 
-	def set_worst_known_value(value):
-		self.worst_known_value = value
+	def update_worst(value):
+		self.worst = value
 
 class Individual: #missing __lt__ and __eq__
 	def __init__(
@@ -84,18 +67,13 @@ class Individual: #missing __lt__ and __eq__
 		self.objective_values = objective_values
 		self.local_crowding_distance = local_crowding_distance
 		self.non_domination_rank = non_domination_rank
+		self.evaluated_on_static_objectives = False
 
 	def __str__(self):
 		return "Genotype:" + str(self.genotype)
 
 class Attribute:
-	def __init__(self,
-			index,                        #index of the attribute in the dataset
-			name,
-			type = None,
-			crucial_values = [],
-			all_values = [],
-			available_values = []):
+	def __init__(self,index,name,type = None,crucial_values = [],all_values = [],available_values = []):
 		"""
 		s
 		"""
@@ -193,7 +171,7 @@ class DT_Node:
 	def is_root(self):
 		return self.parent is None
 
-	def get_subtree_nodes(self, include_self = True, include_terminals = True):
+	def get_subtree_nodes(self, include_self = True, include_terminals = True): #can be optimised
 		"""
 		Returns a list with all the nodes of the subtree with this node as the root node, including himself
 		"""
@@ -267,7 +245,7 @@ class DecisionTree_EA: #oblique, binary trees
 		self.unique_output_labels = []
 		self.attributes = {}
 		self.operators = []
-		#self.objectives = {}
+		self.objectives = {}
 		self.n_objectives = 0
 		self.generation = 0
 		self.population = []
@@ -291,12 +269,27 @@ class DecisionTree_EA: #oblique, binary trees
 			self.operators.append(operator)
 			print("Added new operator:",str(operator))
 
-	def add_objective(self, to_max = True, best_known_value = None, worst_known_value = None):
+	def add_objective(self, objective_name, to_max = True, best = None, worst = None):
+		current_objective_names = [obj.objective_name for obj in self.objectives.values()]
+		do_add = True
+		if len(current_objective_names) > 0:
+			if objective_name in current_objective_names:
+				do_add = False
+				print("Objective ", objective_name, " is already being considered")
 
-		self.objectives[self.n_objectives] = Objective(to_max = to_max,
-													best_known_value = best_known_value,
-													worst_known_value = worst_known_value)
-		self.n_objectives = self.n_objectives + 1
+		if do_add:
+			self.objectives[self.n_objectives] = Objective(objective_name = objective_name,
+															index = self.n_objectives,
+															to_max = to_max,
+															best = best,
+															worst = worst)
+			self.n_objectives = self.n_objectives + 1
+
+			if len(self.population) > 0:
+				for ind in self.population:
+					ind.evaluated_on_static_objectives = False
+					ind.objective_values = [None for _ in range(self.n_objectives)]
+			print("Added objective ", objective_name, ", current objectives: ", current_objective_names)
 
 	def one_point_crossover(self, individual1, individual2):
 		tree1 = individual1.genotype
@@ -412,19 +405,17 @@ class DecisionTree_EA: #oblique, binary trees
 		winner = self.get_best_individual(population = competitors)
 		return winner
 
-	def evaluate_tree(self,root_node,provisional_data=None):
+	def evaluate_tree(self,root_node,data=None):
 		"""
 		return: list of output labels
 		"""
-		if provisional_data is None:
+		if data is None:
 			data = self.data
-		else:
-			data = provisional_data
 		output_array = []
 		#restart the visit count in each node
-		tree_family = root_node.get_subtree_nodes()
-		for node in tree_family:
-			node.visits_count = 0
+		#tree_family = root_node.get_subtree_nodes()
+		#for node in tree_family:
+		#	node.visits_count = 0
 
 		for index, row in data.iterrows():
 			output_array.append(root_node.evaluate(row))
@@ -438,14 +429,25 @@ class DecisionTree_EA: #oblique, binary trees
 		accuracy = corrects / (i+1)
 		return accuracy
 
-	def evaluate_population(self): #CHANGE: needs many
-		#get individual objective values:
-		for ind in self.population:
-			labels = self.evaluate_tree(ind.genotype)
-			accuracy = self.calculate_accuracy(model_output_labels=labels)
-			#print(accuracy)
+	def evaluate_population(self, provisional_data = None): #CHANGE: needs many
+		if provisional_data is None:
+			data = self.data
+		#evaluate individual for static objective values:
+		for objective_index, objective in self.objectives.items():
+			for ind in self.population:
+				if not ind.evaluated_on_static_objectives:
+					if objective.objective_name == "accuracy":
+						labels = self.evaluate_tree(ind.genotype, data = data)
+						objective_value = self.calculate_accuracy(model_output_labels=labels)
+						#ind.objective_values[objective_index] = objective_value	 #will cause weird errors
+						ind.objective_values = [old_value if i!=objective_index else objective_value for i,old_value in enumerate(ind.objective_values)]
+					elif objective.objective_name == "nodes":
+						objective_value = len(ind.genotype.get_subtree_nodes())
+						#ind.objective_values[objective_index] = objective_value
+						ind.objective_values = [old_value if i!=objective_index else objective_value for i,old_value in enumerate(ind.objective_values)]
 
-			ind.objective_values = [accuracy]
+		for ind in self.population:
+			ind.evaluated_on_static_objectives = True
 			#ind.objective_values[0] = accuracy how come this didn´t work
 
 	def adapt_to_data(self, labels, data): #missing test_data
@@ -481,7 +483,7 @@ class DecisionTree_EA: #oblique, binary trees
 		#rules = rules[:20]                                   #for testing
 		root_node = DT_Node()
 		for rule_index,rule in enumerate(rules):
-			print("Parsing rule ", rule)
+			#print("Parsing rule ", rule)
 			node = root_node
 			rule = str(rule)
 			comparisons = rule.split(" & ")           #& symbol should not be in the name of any attribute, verify later
@@ -511,6 +513,7 @@ class DecisionTree_EA: #oblique, binary trees
 			#print("labels[rule_index]",labels[rule_index])
 			#print("rule_index",rule_index)
 			node.output_label = labels[rule_index]
+			print("Parsed a tree with: ", len(root_node.get_subtree_nodes()), " nodes")
 		return root_node
 
 	def _parse_comparison(self,comparison):
