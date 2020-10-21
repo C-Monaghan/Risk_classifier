@@ -63,7 +63,7 @@ shinyUI(ui = tagList(
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
                                                 placeholder = "Enter Your Data Here"),
                                           bsPopover("main_data_tooltip", title="File format",
-                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as Class specifying the variable to be estimated.",
+                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the variable to be estimated.",
                                                  trigger = "hover"),
                                       #tags$hr(),
                                       h4(helpText("Is there a header in the data?")),
