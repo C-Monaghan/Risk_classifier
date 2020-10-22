@@ -15,7 +15,9 @@ library(ROCR)
 #library(tidyrules)
 require(caTools)
 library(rlist)
-require(lfactors)
+library(DT)
+#require(lfactors)
+
 
 # Loading the dataset
 load("GermanCredit.Rdata")
@@ -229,44 +231,21 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
  
   }
 
-initiate_population <- function(Forest){
-  bad_trees_count=0
-  for (Ctree in C$Trees) {
-    if (tree.size(Ctree) > 1){
-      bad_trees_count = bad_trees_count+1
-    }
-    else{
-      rules <- tidyRules(Ctree)
-      #print(rules)
-      PDT$'insert_r_tree_to_population'(rules)
-    }
-  }
-  for (i in 1:bad_trees_count){
-    PDT$'generate_random_tree'()
-  }
-}
-
-# 
-# initiate_ea <- function(Forest, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4) {
-#   use_python("C:/Users/fredx/Anaconda3",required=T)
-#   source_python("Source_EA.py") #temporal, for debugging
-#   PDT <- DecisionTree_EA(tournament_size = tournament_size,
-#                          crossover_rate = crossover_rate,
-#                          mutation_rate = mutation_rate,
-#                          elitism_rate = 0.1, 
-#                          hall_of_fame_size = 3)
-#   PDT$'adapt_to_data'(labels = C$Reduced_data$Class, data=C$Reduced_data)
-#   initiate_population(Forest)
-# }
-# 
-# evolve <- function(generations){
-#   winner <- PDT$evolve(generations)
-#   return(winner)
-# }
-# 
-# testf <- function(){
-#    na <- test_get_names()
-#    return(na)
+# initiate_population <- function(Forest){
+#   bad_trees_count=0
+#   for (Ctree in C$Trees) {
+#     if (tree.size(Ctree) > 1){
+#       bad_trees_count = bad_trees_count+1
+#     }
+#     else{
+#       rules <- tidyRules(Ctree)
+#       #print(rules)
+#       PDT$'insert_r_tree_to_population'(rules)
+#     }
+#   }
+#   for (i in 1:bad_trees_count){
+#     PDT$'generate_random_tree'()
+#   }
 # }
 
 # a<-Classifier(default_data,1,20)
