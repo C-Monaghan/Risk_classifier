@@ -36,6 +36,21 @@ shinyServer(function(input, output, session){
       }
        })
 
+  output$dataset <- renderDataTable({
+    
+    original_data()
+  }%>% datatable(selection=list(target="cell"),
+                 options = list(scrollX = TRUE,
+                                paginate = T,
+                                lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
+                                pageLength = 15,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'color': '#fff'});",
+                                  "}")
+                 )) %>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  
+ 
 
   # Reactive expression to create data frame of all input values ----
   sliderValues <- reactive({
@@ -130,8 +145,16 @@ output$Reduced_data <- renderDataTable({
     })
   } else  return(NULL)
   )
-}, options = list(lengthMenu = c(2,5, 10, 20, 50,100,500,1000), pageLength = 2),
-escape = FALSE)
+}%>% datatable(selection=list(target="cell"),
+               options = list(scrollX = TRUE,
+                              paginate = T,
+                              lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
+                              pageLength = 15,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'color': '#fff'});",
+                                "}")
+               )) %>% DT::formatStyle(columns = names(Main()$Reduced_data), color="blue"))
 
 
 output$colred <- renderTable({
@@ -326,8 +349,8 @@ output$down1<-downloadHandler(
 ######################################################################################
 
 
-use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+# use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 disable("evolve")
 
