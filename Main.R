@@ -16,26 +16,35 @@ library(ROCR)
 require(caTools)
 library(rlist)
 library(DT)
+#require(lfactors)
+
 
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
-#use_python("C:/Users/fredx/Anaconda3",required=T)
-#source_python("Source_EA.py")
+use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+source_python("Source_EA.py")
 
-# tree.size <- function(tree) {
-#   if (is.null(tree)) {
-#     return(0)
-#   } else {
-#     return(1 + tree.size(tree$left) + tree.size(tree$right))
-#   }
-# }
+# Final_Data<-Final_Data[,-1]
+# default_data<-Final_Data[1:100,]
+# australian<-australian[,c(15,1:14)]
+# write.csv(australian,"australian.csv", row.names=FALSE)
+# names(australian)[1] <- "Class"
+# default_data<-australian
+
+ tree.size <- function(tree) {
+  if (is.null(tree)) {
+     return(0)
+   } else {
+     return(1 + tree.size(tree$left) + tree.size(tree$right))
+   }
+ }
 
 # The main function
 Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
-  if(length(unique(na.omit(default_data[,1]))) <= 2L){
-    
+  options(warn=-1)
+  
   # Cleaning the data before using
   default_data<-na.omit(default_data)
   x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
@@ -53,6 +62,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     
     # Reduced dataset
     default_data<-as.data.frame(x[, tmp_coef_ridge@i[-1]])
+    default_data<-data.frame(Class=y,default_data)
   }
   else {
     
@@ -64,11 +74,12 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     
     # Reduced dataset
     default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
+    default_data<-data.frame(Class=y,default_data)
   }
   
   if (ncol(default_data)>25) { #not needed
+    
     # Fit the full model 
-    default_data<-data.frame(Class=y,default_data)
     x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
     y=default_data[,1]
     
@@ -83,11 +94,27 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     
   }
   else {
-    return(default_data)
+    default_data
+  }
+  
+  default_data[,1]<-as.factor(default_data[,1])
+  
+  # Checking the labels and changing them into Good and Bad.
+  if(levels(default_data[,1])==c("FALSE","TRUE")){
+    levels(default_data[,1])[levels(default_data[,1])=="FALSE"] <- "Bad"
+    levels(default_data[,1])[levels(default_data[,1])=="TRUE"] <- "Good"
+    
+    
+  }else if(levels(default_data[,1])==c("0","1")){
+    levels(default_data[,1])[levels(default_data[,1])=="0"] <- "Bad"
+    levels(default_data[,1])[levels(default_data[,1])=="1"] <- "Good"
+    
+  }else{
+    default_data
   }
   
   # Changing the variable to binary which are stored as numeric
-  #default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+   default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
   
   ###################### Decision tree
 
@@ -97,10 +124,11 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   n <- length(Cols)
   
   # You construct all possible combinations
-  id <- unlist( lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
+  id <- unlist(lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
                 recursive=FALSE)
   
-  id<-sample(id, 1000, replace=FALSE) 
+  #selection=100
+  id<-sample(id, selection, replace=FALSE) 
   id<-lapply(id, function(x) list.remove(x,length(x)<2))
   id<-list.clean(id, function(x) length(x) == 0L, TRUE)
  
@@ -119,9 +147,10 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   train = subset(default_data, sample == TRUE)
   test  = subset(default_data, sample == FALSE)
   
+  
   # Storing all the combination of trees
   Forest = list()
-  for(i in 1:selection) { #CHANGE: this is not random
+  for(i in 1:length(id)) { #CHANGE: this is not random
     RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE)
     Forest[[i]] = RPI
   }
@@ -130,66 +159,76 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   # Predicting the performance of the trees
   pred = list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP<-predict(Forest[i],type="class",newdata=test)
     pred[[i]] = RP
   }
   
   prob = list()
-  for(i in 1:selection){
+  for(i in 1:length(id)){
     RP<-predict(Forest[i],type="prob",newdata=test)
     prob[[i]] = RP
   }
   
   forest_pred = list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP<-prediction(prob[[i]][[1]][,2],test[,1])
     forest_pred[[i]] = RP
   }
   
   # Performance of each trees
   forest_perf = list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP<-performance(forest_pred[[i]],"tpr","fpr")
     forest_perf[[i]] = RP
   }
   
   # AUROC of each trees
   forest_AUROC = list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP <- round(performance(forest_pred[[i]], measure = "auc")@y.values[[1]]*100, 2)
     forest_AUROC[[i]] = RP
   }
   
   # Gini Index of each trees
   forest_Gini = list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP<- (2*forest_AUROC[[i]] - 100)
     forest_Gini[[i]] = RP
   }
   
   # Making the table of the performance of the trees
   tab= list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP<-table(test[,1],pred[[i]][[1]])
     tab[[i]] = RP
   }
   
   # Accuracy of the treess
   acc= list()
-  for(i in 1:selection) {
+  for(i in 1:length(id)) {
     RP<-sum(diag(tab[[i]]))/sum(tab[[i]])
     acc[[i]] = RP
   }
   
   # Unlisting the trees
   acc<-unlist(acc, use.names=FALSE)
+  acc<-acc*100
+  acc<-round(acc,digits = 2)
   forest_Gini<-unlist(forest_Gini, use.names=FALSE)
   forest_AUROC<-unlist(forest_AUROC, use.names=FALSE)
   
-  return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, Model_Performance=forest_perf, AUROC=forest_AUROC, Gini_Index= forest_Gini)) 
-  }
-  else NULL
+  max_Acc<-max(acc)
+  ind_max_acc<-which.max(acc)
+  
+  min_gini<-min(forest_Gini)
+  ind_min_gini<-which.min(forest_Gini)
+  
+  max_AUROC<-max(forest_AUROC)
+  ind_max_AUROC<-which.max(forest_AUROC)
+    
+  return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, max_Acc= max_Acc,ind_max_acc=ind_max_acc, Model_Performance=forest_perf, AUROC=forest_AUROC, max_AUROC=max_AUROC,ind_max_AUROC=ind_max_AUROC, Gini_Index= forest_Gini,min_gini=min_gini,ind_min_gini=ind_min_gini)) 
+ 
   }
 
 # initiate_population <- function(Forest){
@@ -218,4 +257,8 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
 # colnames(a$Reduced_data)
 #summary(a$AUROC)
 # summary(a$Gini_Index)
+# a$Accuracy[a$ind_max_Acc]
+# a$Max_Acc
+# rpart.plot(a$Trees[[a$ind_max_Acc]])
+
 

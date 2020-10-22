@@ -63,7 +63,7 @@ shinyUI(ui = tagList(
                                                 multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
                                                 placeholder = "Enter Your Data Here"),
                                           bsPopover("main_data_tooltip", title="File format",
-                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column named as Class specifying the variable to be estimated.",
+                                                 content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the variable to be estimated.",
                                                  trigger = "hover"),
                                       #tags$hr(),
                                       h4(helpText("Is there a header in the data?")),
@@ -89,20 +89,18 @@ shinyUI(ui = tagList(
 
 
                                       # Input: No. of Decision Trees ----
-
                                       sliderInput("trees", "Step 2: How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                  min = 20, max=800,
                                                  step = 4,animate = TRUE,value = 100),
-
-                                      # Input: Which Decision Trees to be viewed ----
-                                      sliderInput("viewtree", "Step 3: Which Decision Tree the user wants to view with its various associative results?",
-                                                  min = 1, max=800,
-                                                  step = 1,animate = TRUE,value = 1),
-
-                                      # Downloading the file type
-                                      h5("3.Select the type of plot to be downloaded:",align="centre"),
-                                      radioButtons("filetype","Select the file type",choices = list("png","pdf"))
-
+                
+                                      # Input: Which Decision Trees and its associative results to be viewed ----
+                                      radioButtons("option","Select the file type",choiceNames = c('Max. Accuracy',
+                                                                                     'Min. Gini Index',
+                                                                                     'Max. AUROC'),choiceValues = c('ind_max_acc','ind_min_gini','ind_max_AUROC'),selected = 'ind_max_acc'),
+                                                   
+                                       # Downloading the file type
+                                       h5("3.Select the type of plot to be downloaded:",align="centre"),          
+                                       radioButtons("filetype","Select the file type",choices = list("png","pdf"))
 
     ),  # Main panel for displaying outputs ----
     mainPanel(

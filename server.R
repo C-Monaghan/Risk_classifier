@@ -9,7 +9,7 @@ library(reticulate)
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
-counter <- 0
+
 
 shinyServer(function(input, output, session){
 
@@ -42,9 +42,9 @@ shinyServer(function(input, output, session){
 
     data.frame(
       Name = c("Variable selection method",
-               "No. of Decision Trees","View the specific Decision Tree","File format/type"),
+               "No. of Decision Trees","File format/type","Option"),
       Value = as.character(c(input$method,
-                             input$trees, input$viewtree, input$filetype)),
+                             input$trees, input$filetype,input$option)),
       stringsAsFactors = FALSE)
 
   })
@@ -57,9 +57,6 @@ shinyServer(function(input, output, session){
    input$trees
  })
 
- viewtree<-reactive({
-   input$viewtree
- })
 
 global <- reactiveValues(response = FALSE)
 
@@ -70,8 +67,6 @@ output$values <- renderTable({
 })
 
 # Show the values in an HTML table ----
-
-
 output$col <- renderTable({
   colnames(original_data())
 }, caption=paste("Variables in the dataset"),
@@ -97,6 +92,8 @@ Classifier(original_data(),  method(),trees())
   } else  return(NULL)
   )
     })
+
+
 
 #classifier_outputs <- Main()
 
@@ -147,9 +144,19 @@ output$colred <- renderTable({
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
 
+option<-reactive({
+  input$button1
+  isolate(if(global$response==T){
+  input$option
+  }
+  else  return(NULL)
+  )
+})
+
 output$plot<-renderPlot({
   input$button1
-
+  
+  if(option()=="ind_max_acc"){
   isolate(if(global$response==T){
 
     # Create 0-row data frame which will be used to store data
@@ -170,11 +177,64 @@ output$plot<-renderPlot({
         # Pause for 0.1 seconds to simulate a long computation.
         Sys.sleep(0.1)
       }
-      rpart.plot(Main()$Trees[[viewtree()]],roundint=FALSE)
+      rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)
     })
   }
   else  return(NULL)
   )
+  }else if (option()=="ind_min_gini") {
+    isolate(if(global$response==T){
+      
+      # Create 0-row data frame which will be used to store data
+      dat <- data.frame(x = numeric(0), y = numeric(0))
+      
+      withProgress(message = 'Making plot', value = 0, {
+        # Number of times we'll go through the loop
+        n <- 10
+        
+        for (i in 1:n) {
+          # Each time through the loop, add another row of data. This is
+          # a stand-in for a long-running computation.
+          dat <- rbind(dat, data.frame(x = rnorm(1), y = rnorm(1)))
+          
+          # Increment the progress bar, and update the detail text.
+          incProgress(1/n, detail = paste("Doing part", i))
+          
+          # Pause for 0.1 seconds to simulate a long computation.
+          Sys.sleep(0.1)
+        }
+        rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)
+      })
+    }
+    else  return(NULL)
+    )
+  }else {
+    isolate(if(global$response==T){
+      
+      # Create 0-row data frame which will be used to store data
+      dat <- data.frame(x = numeric(0), y = numeric(0))
+      
+      withProgress(message = 'Making plot', value = 0, {
+        # Number of times we'll go through the loop
+        n <- 10
+        
+        for (i in 1:n) {
+          # Each time through the loop, add another row of data. This is
+          # a stand-in for a long-running computation.
+          dat <- rbind(dat, data.frame(x = rnorm(1), y = rnorm(1)))
+          
+          # Increment the progress bar, and update the detail text.
+          incProgress(1/n, detail = paste("Doing part", i))
+          
+          # Pause for 0.1 seconds to simulate a long computation.
+          Sys.sleep(0.1)
+        }
+        rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)
+      })
+    }
+    else  return(NULL)
+    )
+  }
 })
 
 
@@ -192,12 +252,32 @@ observeEvent(input$button1, {
 
 Values <- reactive({
 
+  if(option()=="ind_max_acc"){
+
   data.frame(
     Name = c("Accuracy of the Tree",
              "Gini Index","AUROC"),
-    Value = as.character(c(Main()$Accuracy[[viewtree()]], Main()$Gini_Index[[viewtree()]],
-                           Main()$AUROC[[viewtree()]])),
+    Value = as.character(c(Main()$Accuracy[[Main()$ind_max_acc]], Main()$Gini_Index[[Main()$ind_max_acc]],
+                           Main()$AUROC[[Main()$ind_max_acc]])),
     stringsAsFactors = FALSE)
+
+  }
+  else  if(option()=="ind_min_gini"){
+  data.frame(
+    Name = c("Accuracy of the Tree",
+             "Gini Index","AUROC"),
+    Value = as.character(c(Main()$Accuracy[[Main()$ind_min_gini]], Main()$Gini_Index[[Main()$ind_min_gini]],
+                           Main()$AUROC[[Main()$ind_min_gini]])),
+    stringsAsFactors = FALSE)
+  }
+  else {
+    data.frame(
+      Name = c("Accuracy of the Tree",
+               "Gini Index","AUROC"),
+      Value = as.character(c(Main()$Accuracy[[Main()$ind_max_AUROC]], Main()$Gini_Index[[Main()$ind_max_AUROC]],
+                             Main()$AUROC[[Main()$ind_max_AUROC]])),
+      stringsAsFactors = FALSE)
+  }
 
 })
 
@@ -247,6 +327,7 @@ output$down1<-downloadHandler(
 
 
 use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 disable("evolve")
 
