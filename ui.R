@@ -121,23 +121,23 @@ shinyUI(ui = tagList(
               sidebarPanel(width = 3,
                           sliderInput("generations",
                                       "Generations",
-                                      min = 1,
+                                      min = 10,
                                       max=200,
                                       step = 10,
                                       animate = TRUE,
-                                      value = 1),
+                                      value = 10),
                           actionButton("seed",
                                        "Seed population and rules"),
-                          actionButton("evolve",
-                                       "Evolve"),
-                          actionButton("b_update_progress",
-                                       "Update progress")
+                           actionButton("evolve",
+                                        "Evolve")
                           ),
               mainPanel(tabsetPanel(type="tab",
                                     tabPanel("Set of available splits",
-                                             dataTableOutput("crucial_values")),
+                                             #dataTableOutput("crucial_values")),
+                                             DTOutput("crucial_values")),
                                     tabPanel("Progress",
                                              plotOutput("evolution_progress",  width = "100%")),
+                                             #DTOutput("evolution_progress")),
                                     tabPanel("View trees")
                                     )
                         )
