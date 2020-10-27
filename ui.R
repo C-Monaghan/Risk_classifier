@@ -85,7 +85,7 @@ shinyUI(ui = tagList(
 
                                       h4("Please Select Input Values:",align="centre"),
                                       # Input: Variable Selection Method ----
-                                      radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression")),
+                                      radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Lasso Regression","Ridge Regression"),selected = "Lasso Regression"),
 
 
                                       # Input: No. of Decision Trees ----
@@ -94,7 +94,7 @@ shinyUI(ui = tagList(
                                                  step = 4,animate = TRUE,value = 100),
                 
                                       # Input: Which Decision Trees and its associative results to be viewed ----
-                                      radioButtons("option","Select the file type",choiceNames = c('Max. Accuracy',
+                                      radioButtons("option","Select the decision tree to be viewed with the below property:",choiceNames = c('Max. Accuracy',
                                                                                      'Min. Gini Index',
                                                                                      'Max. AUROC'),choiceValues = c('ind_max_acc','ind_min_gini','ind_max_AUROC'),selected = 'ind_max_acc'),
                                                    
@@ -106,10 +106,10 @@ shinyUI(ui = tagList(
     mainPanel(
       tabsetPanel(
         type="tab",
-        tabPanel(" View Input Dataset ",dataTableOutput("dataset"), tableOutput("col")),
+        tabPanel(" View Input Dataset ",dataTableOutput("dataset"),tableOutput("col")),
         tabPanel("User Selection Input",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
         tabPanel("Reduced Dataset after variable selection",downloadButton(outputId="down",label ="Download the reduced data in .csv"),dataTableOutput("Reduced_data"), tableOutput("colred")),
-        tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Calculate"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
+        tabPanel("Classifier",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
       )
        )
     ),
