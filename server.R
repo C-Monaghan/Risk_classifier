@@ -321,15 +321,26 @@ output$down1<-downloadHandler(
 )
 
 
+
+
+
 ######################################################################################
 ##########  EVOLUTIONARY ALGORITHM ###################################################
 ######################################################################################
+
+
+
+
 
 
 use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
 #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 disable("evolve")
+disable("restart_evolution")
+seeded_evolution <- FALSE
+nodes_objective_index <- NULL
+accuracy_objective_index <- NULL
 
 PDT <- DecisionTree_EA(tournament_size = 5,
                        crossover_rate = 0.6,
@@ -338,9 +349,12 @@ PDT <- DecisionTree_EA(tournament_size = 5,
                        hall_of_fame_size = 3)
 
 progress_values <- reactiveValues()
-progress_values$gens <- c(0)
-progress_values$best_values <- c(0.5)
-progress_values$mean_values <- c(0.5)
+#progress_values$gens <- c()
+progress_values$best_values <- c()
+progress_values$mean_values <- c()
+progress_values$best_tree_nodes <- c()
+progress_values$mean_nodes <- c()
+progress_values$df <- data.frame()
 
 initiate_ea <- function(forest,dataset) {
   #source_python("Source_EA.py") #temp
@@ -363,7 +377,10 @@ initiate_ea <- function(forest,dataset) {
     random_tree = PDT$'generate_random_tree'()
     PDT$'insert_tree_to_population'(random_tree)
   }
-  PDT$'add_objective'(objective_name = "accuracy") #new
+  PDT$'add_objective'(objective_name = "accuracy")
+  PDT$'add_objective'(objective_name = "nodes", to_max = FALSE) #new
+  nodes_objective_index <<- 1
+  accuracy_objective_index <<- 0
   
   names <- PDT$'get_attribute_names'()
   values <- PDT$'get_crucial_values'()
@@ -377,10 +394,12 @@ initiate_ea <- function(forest,dataset) {
   return (crucial_values)
 }
 
-update_progress <- function(current_best_value, current_mean_value) {
+update_progress <- function(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes) {
   progress_values$best_values <<- c(progress_values$best_values, current_best_value)
   progress_values$mean_values <<- c(progress_values$mean_values, current_mean_value)
-  progress_values$gens <<- c(progress_values$gens, tail(progress_values$gens, n=1) + 1)
+  #progress_values$gens <<- c(progress_values$gens, tail(progress_values$gens, n=1) + 1)
+  progress_values$best_tree_nodes <<- c(progress_values$best_tree_nodes, current_best_tree_nodes)
+  progress_values$mean_nodes <<- c(progress_values$mean_nodes, current_mean_nodes)
   #print(paste0("Updated values after gen ",progress_values$gens,", tail:",tail(progress_values$gens, n=1)))
 }
 
@@ -393,10 +412,14 @@ observeEvent(input$evolve, {
                    PDT$'evolve'()
                    current_best_value <- PDT$'get_best_value_for_objective'()
                    current_mean_value <- PDT$'get_population_mean_for_objective'()
-                   update_progress(current_best_value, current_mean_value)
+                   #current_best_tree_nodes <- PDT$'get_best_value_for_objective'(objective_index = nodes_objective_index)
+                   current_best_tree_nodes <- PDT$'get_best_individual'()$'objective_values'[[nodes_objective_index+1]]
+                   current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
+                   update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
                    incProgress(1/input$generations)
                  }
                })
+  enable("restart_evolution")
 })
 
 observeEvent(input$seed, {
@@ -405,6 +428,7 @@ observeEvent(input$seed, {
   #output$crucial_values = renderDT(crucial_values, options = list())
   output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
                                                                 options = list(scrollX = TRUE,
+                                                                               #scrolly = TRUE,
                                                                                paginate = T,
                                                                                lengthMenu = c(5, 10, 15),
                                                                                pageLength = 15,
@@ -414,30 +438,105 @@ observeEvent(input$seed, {
                                                                                  "}")
   )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
   enable("evolve")
+  seeded_evolution <<- TRUE
 })
 
 output$evolution_progress <- renderPlot({
-  #plot(x = progress_values$gens, y=progress_values$best_values, type = "o", ylim = c(0,1))
-  plot(x=progress_values$gens, y=progress_values$best_values, type="o", lty=1, ylim=c(0.5,1),
-       axes=F, bty="n", xaxs="i", yaxs="i", main="Accuracy progress",
-       xlab="Generation", ylab="Accuracy")
+  # df<- cbind(data.frame(progress_values$best_values),
+  #            data.frame(progress_values$mean_values),
+  #            data.frame(progress_values$best_tree_nodes),
+  #            data.frame(progress_values$mean_nodes))
+  # Generation <- as.numeric(row.names(df))
+  # plot(x=Generation, y=progress_values$best_values, type="o", lty=1, ylim=c(0.5,1),
+  #      axes=F, bty="n", xaxs="i", yaxs="i", main="Accuracy progress",
+  #      xlab="Generation", ylab="Accuracy")
+  # 
+  # # plot dashed line
+  # lines(x=Generation, y=progress_values$mean_values, lty=2)
+  # 
+  # # add axes
+  # axis(side=1, at=Generation)
+  # axis(side=2, at=seq(0.5,1,0.05), las=1)
+  # grid()
+  # 
+  # # add vertical red line
+  # abline(h=progress_values$best_values[[1]], col="red")
+  # 
+  # # add legend
+  # par(xpd=TRUE)
+  # legend(x=1.5, y=2, legend=c("Best tree", "Population mean"), lty=1:2, box.lty=0, ncol=2)
   
-  # plot dashed line
-  lines(x=progress_values$gens, y=progress_values$mean_values, lty=2)
-  
-  # add axes
-  axis(side=1, at=progress_values$gens)
-  axis(side=2, at=seq(0.5,1,0.05), las=1)
-  grid()
-  
-  # add vertical red line
-  abline(h=progress_values$best_values[[2]], col="red")
-  
-  # add legend
-  par(xpd=TRUE)
-  legend(x=1.5, y=2, legend=c("Best tree", "Population mean"), lty=1:2, box.lty=0, ncol=2)
+    df<- cbind(data.frame(progress_values$best_values),
+               data.frame(progress_values$mean_values),
+               data.frame(progress_values$best_tree_nodes),
+               data.frame(progress_values$mean_nodes))
+    Generation <- as.numeric(row.names(df))
+    ggplot(data = df, aes(x=Generation))+
+      geom_line(aes(y=progress_values$best_values), color = "darkblue", size=1) +
+      geom_point(aes(y=progress_values$best_values), color = "darkblue", size=3) +
+      geom_line(aes(y=progress_values$mean_values), color = "blue", linetype="twodash") +
+      xlab("Generation") +
+      ylab("Accuracy")
 })
 
 
+output$evolution_progress_nodes <- renderPlot({
+  df<- cbind(data.frame(progress_values$best_values),
+            data.frame(progress_values$mean_values),
+            data.frame(progress_values$best_tree_nodes),
+            data.frame(progress_values$mean_nodes))
+  Generation <- as.numeric(row.names(df))
+  ggplot(data = df, aes(x=Generation))+
+    geom_line(aes(y=progress_values$best_tree_nodes), color = "darkblue", size = 1) +
+    geom_point(aes(y=progress_values$best_tree_nodes), color = "darkblue", size=3) +
+    geom_line(aes(y=progress_values$mean_nodes), color = "blue", linetype="twodash") +
+    xlab("Generation") +
+    ylab("Nodes")
+})
+
+observeEvent(input$update_tree, {
+  output$network <- renderVisNetwork({
+    PDT$'evaluate_population'()
+    best_tree <- PDT$'get_best_individual'()$'genotype'
+    best_tree_nodes <- best_tree$'get_subtree_nodes'()
+    #length(best_tree_nodes)
+    connections <- best_tree$'get_connections'()
+    connections
+    c_from <- connections[[1]]
+    c_to <- connections[[2]]
+    c_color <- connections[[3]]
+    new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
+    new_df <- data.frame(id=c(),label=c(), shape=c())
+    i=0
+    for (node in best_tree_nodes){
+      label = (toString(node))
+      color="lightblue"
+      font_color = "white"
+      if (node$'is_terminal'() == TRUE){
+        shape="square"
+      }
+      else{
+        if (node$'is_root'()){
+          shape="triangle"
+          color="blue"
+        }
+        else{
+          shape="triangle"
+        }
+      }
+      
+      new_df <- rbind(new_df, data.frame(id=i,
+                                         label=label, 
+                                         shape=shape,
+                                         color=color,
+                                         font.color = font_color))
+      i=i+1
+    }
+    #new_df
+    visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
+      visEdges(arrows = "from") %>% 
+      visHierarchicalLayout()
+  })
+})
 
 })

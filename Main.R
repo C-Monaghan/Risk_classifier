@@ -17,13 +17,15 @@ require(caTools)
 library(rlist)
 library(DT)
 #require(lfactors)
+library(visNetwork)
+library(ggplot2)
 
 
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
-use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-source_python("Source_EA.py")
+#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+#source_python("Source_EA.py")
 
 # Final_Data<-Final_Data[,-1]
 # default_data<-Final_Data[1:100,]
@@ -114,7 +116,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   }
   
   # Changing the variable to binary which are stored as numeric
-   default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+   #default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
   
   ###################### Decision tree
 

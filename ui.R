@@ -7,7 +7,7 @@ library(shinythemes)
 library(shinyjs)
 library(shinyalert)
 library(shinyWidgets)
-
+#library(shinycssloaders)
 
 shinyUI(ui = tagList(
   tags$head(
@@ -113,8 +113,11 @@ shinyUI(ui = tagList(
       )
        )
     ),
-
-    # Evolutionary Algorithm ----------------------------------------------------------------
+    
+    ######################################################################################
+    ##########  EVOLUTIONARY ALGORITHM ###################################################
+    ######################################################################################
+    
     tabPanel("Evolutionary Algorithm",
               sidebarPanel(width = 3,
                           sliderInput("generations",
@@ -126,17 +129,28 @@ shinyUI(ui = tagList(
                                       value = 10),
                           actionButton("seed",
                                        "Seed population and rules"),
-                           actionButton("evolve",
-                                        "Evolve")
+                          #conditionalPanel(condition = "seeded_population == TRUE",
+                            actionButton("restart_evolution",
+                                         "Restart evoution"),
+                            actionButton("evolve",
+                                         "Evolve")
+                          # )
                           ),
               mainPanel(tabsetPanel(type="tab",
                                     tabPanel("Set of available splits",
                                              #dataTableOutput("crucial_values")),
+                                             actionButton("remove_split",
+                                                          "Remove selected values"),
                                              DTOutput("crucial_values")),
-                                    tabPanel("Progress",
-                                             plotOutput("evolution_progress",  width = "100%")),
-                                             #DTOutput("evolution_progress")),
-                                    tabPanel("View trees")
+                                             
+                                    tabPanel("Progress charts",
+                                             plotOutput("evolution_progress"),
+                                             plotOutput("evolution_progress_nodes")),
+                                    tabPanel("View trees",
+                                             actionButton("update_tree",
+                                                          "View best tree"),
+                                             visNetworkOutput("network", height = "800px", width = "800px"),
+                                             DTOutput("tree_partitions"))
                                     )
                         )
 
