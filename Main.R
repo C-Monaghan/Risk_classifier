@@ -15,11 +15,23 @@ library(ROCR)
 require(caTools)
 library(rlist)
 library(DT)
+library(arsenal)
 
+# Cleaning the data before using
+#default_data<-Final_Data[1:1000,]
+# default_data<-GermanCredit
+# default_data<-australian
+# x<-sample(nrow(Final_Data), 10000, replace=FALSE) 
+# m<-Final_Data[x,]
+# summary(comparedf(Final_Data,m))
 
+# Final_Data<-fread("Final_Data.csv",header = T)
+# default_data<-Final_Data
+# write.csv(Final_Data,"Final_Data.csv", row.names=FALSE)
 # # Loading the dataset
 # load("GermanCredit.Rdata")
 # default_data<-GermanCredit
+
 use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 
@@ -41,17 +53,31 @@ source_python("Source_EA.py")
  }
 
 # The main function
-Classifier<-function(default_data,choose_regression = TRUE,selection=100){
+Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
   
+  # For remving warnings
   options(warn=-1)
   
   # Cleaning the data before using
   default_data<-na.omit(default_data)
-  #default_data[,1]<-as.factor(default_data[,1])
+  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+  
+  # Removing those numerical variables which have correlation between them
+   y=default_data[,1]
+  res<-cor(default_data[sapply(default_data, is.numeric)])
+  default_data <- default_data[,!apply(res,2,function(x) any(x > 0.50|| x< -.50))]
+  
+  fac<-sapply(default_data , is.factor)
+  unclass_fac<-sapply(default_data[,fac], unclass)
+  default_data<-cbind(default_data[,!fac],unclass_fac)
+  
+  default_data<-data.frame(Class=y,default_data)
+
+  ###################### Applying regressions
+  
+  # Making model.matrix by expanding factors to a set of dummy variables
   x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
   y=default_data[,1]
-  
-  ###################### Applying regressions
   
   if (choose_regression==0) {
     
@@ -78,21 +104,20 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     default_data<-data.frame(Class=y,default_data)
   }
   
-  if (ncol(default_data)>25) { #not needed
+  if (ncol(default_data)>25 && id==1) { #not needed
     
-    # Fit the full model 
-    x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
+    # Removing those numerical variables which have correlation between them
     y=default_data[,1]
+    default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+    res<-cor(default_data[sapply(default_data, is.numeric)])
+    default_data <- default_data[,!apply(res,2,function(x) any(x > 0.40|| x< -.40))]
     
-    # Stepwise regression model
-    biggest <- formula(glm(default_data[,1]~.,default_data[,-1], family = "binomial"))
-    fwd.model<-step(glm(default_data[,1]~1, data=default_data[,-1],family = "binomial"),
-                    direction = "forward", scope = biggest,trace = 0)
+    fac<-sapply(default_data , is.factor)
+    unclass_fac<-sapply(default_data[,fac], unclass)
+    name<-colnames(default_data[,!fac])
+    default_data<-cbind(default_data[,name],unclass_fac)
     
-    # Reduced dataset
-    default_data<-as.data.frame(x[,names(fwd.model$coefficients[-1])])
     default_data<-data.frame(Class=y,default_data)
-    
   }
   else {
     default_data
