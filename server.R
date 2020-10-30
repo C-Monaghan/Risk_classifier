@@ -8,27 +8,19 @@ library(reticulate)
 
 # Loading the dataset
 load("GermanCredit.Rdata")
-default_data<-GermanCredit
+data<-GermanCredit
 
 
 shinyServer(function(input, output, session){
-
-  output$dataset <- renderDataTable({
-
-    inFile <- input$sample_file
-
-    if (is.null(inFile))
-      return(default_data)
-
-    read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
-  }, options = list(lengthMenu = c(2,5, 10, 20, 50,100,500,1000), pageLength = 2), escape = FALSE)
-
+  
+  options(shiny.maxRequestSize=100*1024^2)
+  
   ## Original Data
   original_data <- reactive({
     input$button
     inFile <- input$sample_file
     if (is.null(inFile))
-      return(default_data)
+      return(data)
 
     else {
       ori_data <- read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
@@ -36,6 +28,21 @@ shinyServer(function(input, output, session){
       }
        })
 
+  output$dataset <- renderDataTable({
+    
+    original_data()
+  }%>% datatable(selection=list(target="cell"),
+                 options = list(scrollX = TRUE,
+                                paginate = T,
+                                lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
+                                pageLength = 10,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'color': '#fff'});",
+                                  "}")
+                 )) %>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  
+ 
 
   # Reactive expression to create data frame of all input values ----
   sliderValues <- reactive({
@@ -83,6 +90,7 @@ observeEvent(input$button, {
                global$response <- x
              }
   )
+  enable("button1")
 })
 
 Main<-reactive({
@@ -108,30 +116,23 @@ Classifier(original_data(),  method(),trees())
 output$Reduced_data <- renderDataTable({
   input$button
   isolate(if(global$response==T){
-    # Create 0-row data frame which will be used to store data
-    dat <- data.frame(x = numeric(0), y = numeric(0))
-
-    withProgress(message = 'Function Running', value = 0, {
-      # Number of times we'll go through the loop
-      n <- 10
-
-      for (i in 1:n) {
-        # Each time through the loop, add another row of data. This is
-        # a stand-in for a long-running computation.
-        dat <- rbind(dat, data.frame(x = rnorm(1), y = rnorm(1)))
-
-        # Increment the progress bar, and update the detail text.
-        incProgress(1/n, detail = paste("Doing part", i))
-
-        # Pause for 0.1 seconds to simulate a long computation.
-        #Sys.sleep(0.1)
-      }
-      Main()$Reduced_data
-    })
+    
+    withProgress({Main()$Reduced_data},
+                 message = 'Function Running', value = 0.8  )
+      
+  
   } else  return(NULL)
   )
-}, options = list(lengthMenu = c(2,5, 10, 20, 50,100,500,1000), pageLength = 2),
-escape = FALSE)
+}%>% datatable(selection=list(target="cell"),
+               options = list(scrollX = TRUE,
+                              paginate = T,
+                              lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
+                              pageLength = 10,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'color': '#fff'});",
+                                "}")
+               )) %>% DT::formatStyle(columns = names(Main()$Reduced_data), color="blue"))
 
 
 output$colred <- renderTable({
@@ -159,78 +160,27 @@ output$plot<-renderPlot({
   if(option()=="ind_max_acc"){
   isolate(if(global$response==T){
 
-    # Create 0-row data frame which will be used to store data
-    dat <- data.frame(x = numeric(0), y = numeric(0))
-
-    withProgress(message = 'Making plot', value = 0, {
-      # Number of times we'll go through the loop
-      n <- 10
-
-      for (i in 1:n) {
-        # Each time through the loop, add another row of data. This is
-        # a stand-in for a long-running computation.
-        dat <- rbind(dat, data.frame(x = rnorm(1), y = rnorm(1)))
-
-        # Increment the progress bar, and update the detail text.
-        incProgress(1/n, detail = paste("Doing part", i))
-
-        # Pause for 0.1 seconds to simulate a long computation.
-        Sys.sleep(0.1)
-      }
-      rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)
-    })
+    withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)},
+                 message = 'Making plot', value = 0.5 )
   }
   else  return(NULL)
   )
   }else if (option()=="ind_min_gini") {
     isolate(if(global$response==T){
       
-      # Create 0-row data frame which will be used to store data
-      dat <- data.frame(x = numeric(0), y = numeric(0))
-      
-      withProgress(message = 'Making plot', value = 0, {
-        # Number of times we'll go through the loop
-        n <- 10
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)},
+                   message = 'Making plot', value = 0.5 )
         
-        for (i in 1:n) {
-          # Each time through the loop, add another row of data. This is
-          # a stand-in for a long-running computation.
-          dat <- rbind(dat, data.frame(x = rnorm(1), y = rnorm(1)))
-          
-          # Increment the progress bar, and update the detail text.
-          incProgress(1/n, detail = paste("Doing part", i))
-          
-          # Pause for 0.1 seconds to simulate a long computation.
-          Sys.sleep(0.1)
-        }
-        rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)
-      })
+      
     }
     else  return(NULL)
     )
   }else {
     isolate(if(global$response==T){
+  
       
-      # Create 0-row data frame which will be used to store data
-      dat <- data.frame(x = numeric(0), y = numeric(0))
-      
-      withProgress(message = 'Making plot', value = 0, {
-        # Number of times we'll go through the loop
-        n <- 10
-        
-        for (i in 1:n) {
-          # Each time through the loop, add another row of data. This is
-          # a stand-in for a long-running computation.
-          dat <- rbind(dat, data.frame(x = rnorm(1), y = rnorm(1)))
-          
-          # Increment the progress bar, and update the detail text.
-          incProgress(1/n, detail = paste("Doing part", i))
-          
-          # Pause for 0.1 seconds to simulate a long computation.
-          Sys.sleep(0.1)
-        }
-        rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)
-      })
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)},
+                   message = 'Making plot', value = 0.5  )
     }
     else  return(NULL)
     )
@@ -326,8 +276,8 @@ output$down1<-downloadHandler(
 ######################################################################################
 
 
-use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+# use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 disable("evolve")
 
