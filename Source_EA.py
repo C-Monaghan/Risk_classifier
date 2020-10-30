@@ -22,6 +22,10 @@ import pandas as pd
 import copy
 import statistics as st
 
+text_to_operator = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
+operator_to_text = {op.lt:"<",op.ge:">=",op.le:"<=",op.gt:">",op.eq:"==",op.ne:"!="}
+inverse_operators = {op.lt:op.ge,op.le:op.gt,op.gt:op.le,op.ge:op.lt,op.eq:op.ne}
+
 def get_arity(operator): #currrently not needed
 	"""
 	Returns the arity of the method, operator or funtion as an int
@@ -38,6 +42,7 @@ class Objective:
 		self.to_max = to_max
 		self.best = best
 		self.worst = worst
+		print("created objective: ", objective_name)
 
 	def update_best(value):
 		self.best = value
@@ -50,8 +55,8 @@ class Individual: #missing __lt__ and __eq__
 			self,
 			generation_of_creation,
 			genotype,
+			n_objectives = 0,
 			phenotype = None,
-			objective_values = [0],
 			n_dominators = None,                 #used in MOEA, pareto dominance
 			n_dominated_solutions = None,        #used in MOEA, pareto dominance
 			dominated_solutions = None,          #used in NSGA-II
@@ -64,13 +69,19 @@ class Individual: #missing __lt__ and __eq__
 		self.n_dominators = n_dominators
 		self.n_dominated_solutions = n_dominated_solutions
 		self.dominated_solutions = dominated_solutions
-		self.objective_values = objective_values
 		self.local_crowding_distance = local_crowding_distance
 		self.non_domination_rank = non_domination_rank
 		self.evaluated_on_static_objectives = False
+		self.nodes = [] #usage: speed
+
+		self.objective_values = [None for _ in range(n_objectives)]
+
+	def change_n_objectives(self, new_n_objectives):
+		self.evaluated_on_static_objectives = False
+		self.objective_values = [None for _ in range(new_n_objectives)]
 
 	def __str__(self):
-		return "Genotype:" + str(self.genotype)
+		return "Ind. Genotype:" + str(self.genotype) + ", obj values:" + str(self.objective_values)
 
 class Attribute:
 	def __init__(self,index,name,type = None,crucial_values = [],all_values = [],available_values = []):
@@ -171,6 +182,9 @@ class DT_Node:
 	def is_root(self):
 		return self.parent is None
 
+	def get_partitions(self):
+		pass
+
 	def get_subtree_nodes(self, include_self = True, include_terminals = True): #can be optimised
 		"""
 		Returns a list with all the nodes of the subtree with this node as the root node, including himself
@@ -189,6 +203,28 @@ class DT_Node:
 			return nodes
 		else:
 			return nodes[1:]
+
+	def get_connections(self, include_terminals = True): #can be optimised
+		"""
+		Returns a list with all the nodes of the subtree with this node as the root node, including himself
+		"""
+		nodes = [self]
+		c_from = []
+		c_to = []
+		c_color = []
+		i = 0
+		while i < len(nodes):
+			for child_index, child in enumerate(nodes[i].children):
+				if (not child.is_terminal() and not include_terminals) or include_terminals:
+					c_from.append(i)
+					c_to.append(len(nodes))
+					if child_index == 0:
+						c_color.append("blue")
+					else:
+						c_color.append("red")
+					nodes.append(child)
+			i += 1
+		return c_to, c_from, c_color
 
 	def get_max_depth(self, depth = 0):
 		"""
@@ -211,7 +247,7 @@ class DT_Node:
 
 	def copy(self, parent=None): #missing test: evaluate the copy
 		"""
-		Don't give arguments. Returns an unrelated new item with the same characteristics
+		Returns an unrelated new item with the same characteristics
 		"""
 		the_copy = DT_Node(parent = parent)
 		the_copy.updated=self.updated
@@ -230,10 +266,10 @@ class DT_Node:
 		return the_copy
 
 	def __str__(self):
-			if self.attribute is None:
-				return "Node: terminal,ol:" + str(self.output_label) + ",visits:" + str(self.visits_count)
+			if self.is_terminal():
+				return "Class: " + str(self.output_label) + "\nVisits:" + str(self.visits_count)
 			else:
-				return "Node:" + self.attribute.name + ",op:" + str(self.operator) + ",value:" + str(self.comparable_value) + ",subtree nodes:" + str(len(self.get_subtree_nodes(include_terminals=False)))  + ",visits:" + str(self.visits_count)
+				return self.attribute.name +"\n"+ str(self.comparable_value) + "\nVisits:" + str(self.visits_count)
 
 	#def __eq__(self, other):
 
@@ -283,13 +319,24 @@ class DecisionTree_EA: #oblique, binary trees
 															to_max = to_max,
 															best = best,
 															worst = worst)
-			self.n_objectives = self.n_objectives + 1
+			#self.n_objectives = self.n_objectives + 1
+			self.n_objectives = len(self.objectives.items())
 
 			if len(self.population) > 0:
 				for ind in self.population:
-					ind.evaluated_on_static_objectives = False
-					ind.objective_values = [None for _ in range(self.n_objectives)]
-			print("Added objective ", objective_name, ", current objectives: ", current_objective_names)
+					ind.change_n_objectives(new_n_objectives = self.n_objectives)
+			print("Added objective ", objective_name)
+
+	def remove_objective(self, objective_name):
+		if len(self.objectives.items()) > 0:
+			self.objectives = {key:val for key, val in self.objective.items() if val.name != objective_name}
+			if self.n_objectives != len(self.objectives.items()):
+				self.n_objectives = len(self.objectives.items())
+				print("Removed objective ", objective_name)
+			else:
+				print("The objective was not being considered")
+		else:
+			print("There are no objectives")
 
 	def one_point_crossover(self, individual1, individual2):
 		tree1 = individual1.genotype
@@ -309,8 +356,8 @@ class DecisionTree_EA: #oblique, binary trees
 		node1.parent.replace_child(new_child=temp2, old_child=node1)
 		node2.parent.replace_child(new_child=temp1, old_child=node2)
 
-		new_individual1 = Individual(generation_of_creation = self.generation, genotype = copy1)
-		new_individual2 = Individual(generation_of_creation = self.generation, genotype = copy2)
+		new_individual1 = Individual(generation_of_creation = self.generation, genotype = copy1, n_objectives = self.n_objectives)
+		new_individual2 = Individual(generation_of_creation = self.generation, genotype = copy2, n_objectives = self.n_objectives)
 
 		return [new_individual1, new_individual2]
 
@@ -330,7 +377,7 @@ class DecisionTree_EA: #oblique, binary trees
 		#print("new_node",new_node)
 		#print("acc_old",str(self.calculate_accuracy(self.evaluate_tree(tree))))
 		#print("acc_new",str(self.calculate_accuracy(self.evaluate_tree(tree_copy))))
-		new_individual = Individual(generation_of_creation = self.generation, genotype = tree_copy)
+		new_individual = Individual(generation_of_creation = self.generation, genotype = tree_copy, n_objectives = self.n_objectives)
 		return new_individual
 
 	def generate_random_node(self):
@@ -394,12 +441,6 @@ class DecisionTree_EA: #oblique, binary trees
 		self.population = newgen_pop
 		self.evaluate_population()
 
-	def get_population_mean_for_objective(self, population = None, objective_index = 0):
-		if population is None:
-			population = self.population
-		mean = sum([ind.objective_values[objective_index] for ind in self.population])/len(self.population)
-		return mean
-
 	def tournament_selection(self): #population could be sorted before to avoid repetition
 		competitors = rd.sample(self.population, self.tournament_size)
 		winner = self.get_best_individual(population = competitors)
@@ -442,7 +483,7 @@ class DecisionTree_EA: #oblique, binary trees
 						#ind.objective_values[objective_index] = objective_value	 #will cause weird errors
 						ind.objective_values = [old_value if i!=objective_index else objective_value for i,old_value in enumerate(ind.objective_values)]
 					elif objective.objective_name == "nodes":
-						objective_value = len(ind.genotype.get_subtree_nodes())
+						objective_value = len(ind.genotype.get_subtree_nodes(include_terminals = False))
 						#ind.objective_values[objective_index] = objective_value
 						ind.objective_values = [old_value if i!=objective_index else objective_value for i,old_value in enumerate(ind.objective_values)]
 
@@ -473,7 +514,8 @@ class DecisionTree_EA: #oblique, binary trees
 
 	def insert_tree_to_population(self,tree):
 		individual = Individual(generation_of_creation = self.current_generation,
-								genotype = tree)
+								genotype = tree,
+								n_objectives = self.n_objectives)
 		self.population.append(individual)
 
 	def _parse_tree_r(self, tree):
@@ -553,30 +595,39 @@ class DecisionTree_EA: #oblique, binary trees
 		at_values = [attribute.crucial_values for attribute in self.attributes.values()]
 		return at_values
 
-	def get_best_individual(self, population = None, objective_index = 0):
+	def get_best_individual(self, population = None, objective_index = 0):#, n = 1):
 		if population is None:
 			population = self.population
-		sorted_competitors = self._sort_individuals(population = population)
-		return sorted_competitors[0]
+		sorted_competitors = self._sort_individuals(population = population, objective_index = int(objective_index))
+		return sorted_competitors[0]#:n]
 
 	def get_best_value_for_objective(self, population = None, objective_index = 0):
+		objective_index = int(objective_index)
 		if population is None:
 			population = self.population
 		winner = self.get_best_individual(population=population, objective_index = objective_index)
 		return winner.objective_values[objective_index]
 
+	def get_population_mean_for_objective(self, population = None, objective_index = 0):
+		if population is None:
+			population = self.population
+		mean = sum([ind.objective_values[int(objective_index)] for ind in self.population])/len(self.population)
+		return mean
+
 	def _sort_individuals(self, population = None, objective_index = 0):
 		if population is None:
 			population = self.population
-		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[objective_index], reverse = True) #CHANGE: needs to know if to max or not
+		current_objective = self.objectives[int(objective_index)]
+
+		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[int(objective_index)], reverse = current_objective.to_max)
 		return sorted_competitors
 
-def test_get_numbers():
-	return [[1,2],[2,3],[]]
-	#return ["Hola","mundo"]
-
-def test_get_names():
-	#return [[1,2],[2,3]]
-	return ["Hola","mundo"]
+	def restart_evolution(self):
+		self.current_generation = 0
+		self.population = []
+		self.archive_population = []
+		self.hall_of_fame = []
 
 #Version control: 13:49 19/10/20
+def test():
+	return 1, 2

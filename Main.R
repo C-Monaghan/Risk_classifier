@@ -15,7 +15,10 @@ library(ROCR)
 require(caTools)
 library(rlist)
 library(DT)
+library(visNetwork)
+library(ggplot2)
 library(arsenal)
+
 
 # Cleaning the data before using
 #default_data<-Final_Data[1:1000,]
@@ -32,6 +35,9 @@ library(arsenal)
 # load("GermanCredit.Rdata")
 # default_data<-GermanCredit
 
+# Loading the dataset
+load("GermanCredit.Rdata")
+default_data<-GermanCredit
 use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 
@@ -140,7 +146,10 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
   }
   
   # Changing the variable to binary which are stored as numeric
+   #default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+
   # default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+
   
   ###################### Decision tree
 
