@@ -124,7 +124,7 @@ class DT_Node:
 		self.output_label = None
 		self.attribute = None
 		self.operator = None
-		self.operator_name = "x"
+		self.operator_name = None
 		self.comparable_value = None
 		self.comparable_value_index = None
 		self.visits_count = 0
@@ -256,6 +256,7 @@ class DT_Node:
 		the_copy.output_label = self.output_label
 		the_copy.attribute = self.attribute
 		the_copy.operator = self.operator
+		the_copy.operator_name = self.operator_name
 		the_copy.comparable_value = self.comparable_value
 		the_copy.comparable_value_index = self.comparable_value_index
 
