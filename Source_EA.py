@@ -124,17 +124,21 @@ class DT_Node:
 		self.output_label = None
 		self.attribute = None
 		self.operator = None
+		self.operator_name = "x"
 		self.comparable_value = None
 		self.comparable_value_index = None
 		self.visits_count = 0
+		self.output_label_count = {}
 		self.gini_index = None
+		#self.class_count = {
 
-	def update(self,attribute,comparable_value_index,comparable_value,operator): #only used when parsing trees from R
+	def update(self,attribute,comparable_value_index,comparable_value,operator,operator_name): #only used when parsing trees from R
 		self.updated = True
 		self.attribute = attribute
 		self.comparable_value = comparable_value #float(self.attribute.crucial_values[comparable_value_index]) #all are floats rn
 		self.comparable_value_index = comparable_value_index
 		self.operator = operator
+		self.operator_name = operator_name
 
 	def add_child(self,name,child,index=None):
 		child.parent = self
@@ -167,7 +171,7 @@ class DT_Node:
 
 			if comparison == True:
 				#print("Going to child", self.children_names[0])
-				return self.children[0].evaluate(data_row)
+				return self.children[0].evaluate(data_row) #can be improved
 			else:
 				#print("Going to child", self.children_names[1])
 				return self.children[1].evaluate(data_row)
@@ -181,9 +185,6 @@ class DT_Node:
 
 	def is_root(self):
 		return self.parent is None
-
-	def get_partitions(self):
-		pass
 
 	def get_subtree_nodes(self, include_self = True, include_terminals = True): #can be optimised
 		"""
@@ -269,7 +270,7 @@ class DT_Node:
 			if self.is_terminal():
 				return "Class: " + str(self.output_label) + "\nVisits:" + str(self.visits_count)
 			else:
-				return self.attribute.name +"\n"+ str(self.comparable_value) + "\nVisits:" + str(self.visits_count)
+				return self.attribute.name +"\n"+ self.operator_name + "\n"+ str(self.comparable_value) + "\nVisits:" + str(self.visits_count)
 
 	#def __eq__(self, other):
 
@@ -300,10 +301,10 @@ class DecisionTree_EA: #oblique, binary trees
 		self.mutations = 0
 		self.elites = 0
 
-	def add_operator(self,operator): #operators with compatibility to certain attributes?
-		if operator not in self.operators:
-			self.operators.append(operator)
-			print("Added new operator:",str(operator))
+	def add_operator(self,operator_name): #operators with compatibility to certain attributes?
+		if operator_name not in self.operators:
+			self.operators.append(operator_name)
+			print("Added new operator:",operator_name)
 
 	def add_objective(self, objective_name, to_max = True, best = None, worst = None):
 		current_objective_names = [obj.objective_name for obj in self.objectives.values()]
@@ -382,13 +383,18 @@ class DecisionTree_EA: #oblique, binary trees
 
 	def generate_random_node(self):
 		node = DT_Node()
-		node.updated = True #might not be needed
-		node.attribute = rd.choice([att for att in list(self.attributes.values()) if len(att.crucial_values) > 0]) #can be optimised
-		node.operator = rd.choice(self.operators)
-		#if len(self.attributes.crucial_values) > 0:
-		node.comparable_value_index = rd.choice(range(len(node.attribute.crucial_values))) #can be optimised
-		node.comparable_value = node.attribute.crucial_values[node.comparable_value_index]
-		#else:
+
+		attribute = rd.choice([att for att in list(self.attributes.values()) if len(att.crucial_values) > 0]) #can be optimised
+		operator_name = rd.choice(self.operators)
+		operator = self.operators_db[operator_name]
+		
+		comparable_value_index = rd.choice(range(len(attribute.crucial_values))) #can be optimised
+		comparable_value = attribute.crucial_values[comparable_value_index]
+		node.update(attribute=attribute,
+					comparable_value_index=comparable_value_index,
+					comparable_value=comparable_value,
+					operator=operator,
+					operator_name=operator_name)
 
 		return node
 
@@ -544,11 +550,12 @@ class DecisionTree_EA: #oblique, binary trees
 						#	child = node.add_child(name=comparison)
 						#pass
 					else:
-						attribute, operator, comparable_value, comparable_value_index = self._parse_comparison(comparison)
+						attribute, operator, operator_name, comparable_value, comparable_value_index = self._parse_comparison(comparison)
 						node.update(attribute=attribute,
 									comparable_value_index=comparable_value_index,
 									comparable_value=comparable_value,
-									operator=operator)
+									operator=operator,
+									operator_name=operator_name)
 					child = node.add_new_child(name=comparison)
 				#if n_comparisons == comp_idx:
 				node = child
@@ -582,10 +589,10 @@ class DecisionTree_EA: #oblique, binary trees
 		comparable_value = float(value_string) #all are floats because of this
 
 		#Add to the model
-		self.add_operator(operator)
+		self.add_operator(operator_name)
 		comparable_value_index = attribute.add_crucial_value(comparable_value)
 
-		return attribute, operator, comparable_value, comparable_value_index
+		return attribute, operator, operator_name, comparable_value, comparable_value_index
 
 	def get_attribute_names(self):
 		at_names = [attribute.name for attribute in self.attributes.values()]
