@@ -151,7 +151,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:length(Formulas)) { #CHANGE: this is not random
-    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control(minsplit=2, minbucket=1, cp=0.005))
+    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control(minsplit=2, minbucket=1, cp=0.008))
     Forest[[i]] = RPI
   }
   
