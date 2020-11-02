@@ -284,8 +284,8 @@ output$down1<-downloadHandler(
 
 
 
-use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+#use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 
 source_python("Source_EA.py")
 disable("evolve")
