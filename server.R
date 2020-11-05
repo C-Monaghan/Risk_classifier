@@ -35,6 +35,9 @@ shinyServer(function(input, output, session){
       if(is.null(original_data())){return()}
       original_data()
   },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
+  
+  #,options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
+  
   # }%>% datatable(selection=list(target="row"),
   #                                    options = list(scrollX = TRUE,
   #                                                  paginate = T,
@@ -51,6 +54,7 @@ shinyServer(function(input, output, session){
                          #                 "function(settings, json) {",
                          #                  "$(this.api().table().header()).css({'color': '#fff'});",
                          #                  "}"))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  
   # }%>% datatable(selection=list(target="row"),
   #                  options = list(scrollX = TRUE,
   #                                paginate = T,
@@ -155,28 +159,37 @@ Classifier(original_data(),  method(),trees())
   )
     })
 
+output$Reduced_data <- renderDataTable({ 
+  input$button
+  if(is.null(original_data())){return()}
+  isolate(if(global$response==T){
+        withProgress({Main()$Reduced_data},
+                      message = 'Function Running', value = 0.8  )
+       } else  return(NULL)
+       )
+},options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
 
 # Show the values in an HTML table ----
-output$Reduced_data <- renderDataTable({
-  input$button
-  isolate(if(global$response==T){
-    
-    withProgress({Main()$Reduced_data},
-                 message = 'Function Running', value = 0.8  )
-      
-  
-  } else  return(NULL)
-  )
-}%>% datatable(selection=list(target="row"),
-               options = list(scrollX = TRUE,
-                              paginate = T,
-                              lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
-                              pageLength = 10,
-                              initComplete = JS(
-                                "function(settings, json) {",
-                                "$(this.api().table().header()).css({'color': '#fff'});",
-                                "}")
-               )) %>% DT::formatStyle(columns = names(Main()$Reduced_data), color="blue"))
+# output$Reduced_data <- renderDataTable({
+#   input$button
+#   isolate(if(global$response==T){
+#     
+#     withProgress({Main()$Reduced_data},
+#                  message = 'Function Running', value = 0.8  )
+#       
+#   
+#   } else  return(NULL)
+#   )
+# }%>% datatable(selection=list(target="row"),
+#                options = list(scrollX = TRUE,
+#                               paginate = T,
+#                               lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
+#                               pageLength = 10,
+#                               initComplete = JS(
+#                                 "function(settings, json) {",
+#                                 "$(this.api().table().header()).css({'color': '#fff'});",
+#                                 "}")
+#                )) %>% DT::formatStyle(columns = names(Main()$Reduced_data), color="blue"))
 
 
 output$colred <- renderTable({
@@ -436,21 +449,23 @@ observeEvent(input$evolve, {
   enable("restart_evolution")
 })
 
+
 observeEvent(input$seed, {
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Test_data)
   #output$crucial_values <- renderDataTable(crucial_values)})
   #output$crucial_values = renderDT(crucial_values, options = list())
-  output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
-                                                                options = list(scrollX = TRUE,
-                                                                               #scrolly = TRUE,
-                                                                               paginate = T,
-                                                                               lengthMenu = c(5, 10, 15),
-                                                                               pageLength = 15,
-                                                                               initComplete = JS(
-                                                                                 "function(settings, json) {",
-                                                                                 "$(this.api().table().header()).css({'color': '#fff'});",
-                                                                                 "}")
-  )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
+  output$crucial_values = renderDataTable({  crucial_values},options = list(pageLength=10, lengthMenu = c(5, 10, 15)))
+    # renderDT(crucial_values %>% datatable(selection=list(target="cell"),
+    #                                                             options = list(scrollX = TRUE,
+    #                                                                            #scrolly = TRUE,
+    #                                                                            paginate = T,
+    #                                                                            lengthMenu = c(5, 10, 15),
+    #                                                                            pageLength = 15,
+    #                                                                            initComplete = JS(
+    #                                                                              "function(settings, json) {",
+    #                                                                              "$(this.api().table().header()).css({'color': '#fff'});",
+    #                                                                              "}")
+  #)) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
   enable("evolve")
   seeded_evolution <<- TRUE
 })
@@ -525,7 +540,7 @@ observeEvent(input$update_tree, {
     for (node in best_tree_nodes){
       label = (toString(node))
       color="lightblue"
-      font_color = "white"
+      font_color = "black"
       if (node$'is_terminal'() == TRUE){
         shape="square"
       }
