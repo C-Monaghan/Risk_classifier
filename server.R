@@ -17,45 +17,99 @@ shinyServer(function(input, output, session){
   
   ## Original Data
   original_data <- reactive({
-    input$button
+   
     inFile <- input$sample_file
-    if (is.null(inFile))
+    if(input$data_choice == FALSE){
       return(data)
-
+    }
+      else if(is.null(inFile)) { 
+        return(NULL)
+      }
     else {
       ori_data <- read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
       ori_data
-      }
+    }
        })
 
-  output$dataset <- renderDataTable({
-    
-    original_data()
-  }%>% datatable(selection=list(target="cell"),
-                 options = list(scrollX = TRUE,
-                                paginate = T,
-                                lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
-                                pageLength = 10,
-                                initComplete = JS(
-                                  "function(settings, json) {",
-                                  "$(this.api().table().header()).css({'color': '#fff'});",
-                                  "}")
-                 )) %>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  output$dataset <- renderDataTable({  
+      if(is.null(original_data())){return()}
+      original_data()
+  },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
+  # }%>% datatable(selection=list(target="row"),
+  #                                    options = list(scrollX = TRUE,
+  #                                                  paginate = T,
+  #                                                   lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),
+  #                                                   pageLength = 10,
+  #                                                   initComplete = JS(
+  #                                                     "function(settings, json) {",
+  #                                                     "$(this.api().table().header()).css({'color': '#fff'});",
+  #                                                     "}")
+  #                                    ))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
+                   
+     #,  options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
+                         # initComplete = JS(
+                         #                 "function(settings, json) {",
+                         #                  "$(this.api().table().header()).css({'color': '#fff'});",
+                         #                  "}"))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  # }%>% datatable(selection=list(target="row"),
+  #                  options = list(scrollX = TRUE,
+  #                                paginate = T,
+  #                                 lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),
+  #                                 pageLength = 10,
+  #                                 initComplete = JS(
+  #                                   "function(settings, json) {",
+  #                                   "$(this.api().table().header()).css({'color': '#fff'});",
+  #                                   "}")
+  #                  ))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
   
- 
 
   # Reactive expression to create data frame of all input values ----
   sliderValues <- reactive({
 
     data.frame(
       Name = c("Variable selection method",
-               "No. of Decision Trees","File format/type","Option"),
+               "No. of Decision Trees"),
       Value = as.character(c(input$method,
-                             input$trees, input$filetype,input$option)),
+                             input$trees)),
       stringsAsFactors = FALSE)
 
   })
-
+  # Dynamically adjust PPCA Main layout width
+  observeEvent(input$tabs, {
+    if(input$tabs == 'steps') {
+      removeClass("main_layout", "col-sm-9")
+      addClass("main_layout", "col-sm-12")
+    }
+    else {
+      removeClass("main_layout", "col-sm-12")
+      addClass("main_layout", "col-sm-9")
+    }
+  })
+  
+  # Data button from Quick Start
+  observeEvent(input$data,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "data")
+               })
+  )
+  
+  # Method specification button from Quick Start
+  observeEvent(input$method_spec,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "specification")
+               })
+  )
+  # Parameter button from View dataset tab
+  observeEvent(input$parameter_button,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "specification")
+               })
+  )
+  
+ 
  method<-reactive({
    input$method
  })
@@ -102,16 +156,6 @@ Classifier(original_data(),  method(),trees())
     })
 
 
-
-#classifier_outputs <- Main()
-
-#f_evolve <- function(){
-# use_python("C:/Users/fredx/Anaconda3",required=T)
-# for (Ctree in C$Trees) {
-# rules <- tidyRules(CTree)
-# }
-#}
-
 # Show the values in an HTML table ----
 output$Reduced_data <- renderDataTable({
   input$button
@@ -123,7 +167,7 @@ output$Reduced_data <- renderDataTable({
   
   } else  return(NULL)
   )
-}%>% datatable(selection=list(target="cell"),
+}%>% datatable(selection=list(target="row"),
                options = list(scrollX = TRUE,
                               paginate = T,
                               lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
@@ -258,6 +302,7 @@ output$down1<-downloadHandler(
     paste("DecisionTree",input$filetype,sep=".")
   },
   content = function(file){
+    if(option()=="ind_max_acc"){
     #open the device <-png(),pdf()
     # create/write the plot
     #close the device
@@ -265,8 +310,25 @@ output$down1<-downloadHandler(
       png(file)
     else
       pdf(file)
-    rpart.plot(Main()$Trees[[viewtree()]],roundint=FALSE)
+    rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)
     dev.off()
+    }
+    else  if(option()=="ind_min_gini"){
+      if(input$filetype=="png")
+        png(file)
+      else
+        pdf(file)
+      rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)
+      dev.off()
+    }
+    else {
+      if(input$filetype=="png")
+        pdf(file)
+      else
+        png(file)
+      rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)
+      dev.off()
+    }
   }
 )
 

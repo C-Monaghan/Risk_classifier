@@ -96,6 +96,16 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   default_data[,1]<-as.factor(default_data[,1])
   
+  # Changing the variable to binary which are stored as numeric
+  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+  nums <- default_data[sapply(default_data,is.numeric)]
+  x<- default_data[ ,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]
+  xx<-ifelse(x[,-1] == "1", 0, 1)
+  default_data<-data.frame(Class=y,nums,xx)
+
+  
+
+  
   # Checking the labels and changing them into Good and Bad.
   if(levels(default_data[,1])==c("FALSE","TRUE")){
     levels(default_data[,1])[levels(default_data[,1])=="FALSE"] <- "Bad"
@@ -109,16 +119,6 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   }else{
     default_data
   }
-  
-  
-  # Changing the variable to binary which are stored as numeric
-  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
-  nums <- default_data[sapply(default_data,is.numeric)]
-  x<- default_data[ ,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]
-  xx<-ifelse(x[,-1] == "1", 0, 1)
-  default_data<-data.frame(Class=y,nums,xx)
-
-  
   ###################### Decision tree
 
   # You get the names of the columns
@@ -126,7 +126,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
 
-  # Mkaing combination of columns/variable names with minimum 3 variables
+  # Making combination of columns/variable names with minimum 3 variables
   # selection=100
   minimum_columns <- 3
   id <- lapply(1:(selection-1),function(i)sample(seq(n),sample(seq(minimum_columns,n))))
@@ -151,7 +151,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:length(Formulas)) { #CHANGE: this is not random
-    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control(minsplit=2, minbucket=1, cp=0.008))
+    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control(minsplit=2, minbucket=1, cp=0.009))
     Forest[[i]] = RPI
   }
   
