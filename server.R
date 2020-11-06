@@ -34,33 +34,8 @@ shinyServer(function(input, output, session){
   output$dataset <- renderDataTable({  
       if(is.null(original_data())){return()}
       original_data()
-  },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
-  # }%>% datatable(selection=list(target="row"),
-  #                                    options = list(scrollX = TRUE,
-  #                                                  paginate = T,
-  #                                                   lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),
-  #                                                   pageLength = 10,
-  #                                                   initComplete = JS(
-  #                                                     "function(settings, json) {",
-  #                                                     "$(this.api().table().header()).css({'color': '#fff'});",
-  #                                                     "}")
-  #                                    ))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
-                   
-     #,  options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000)))
-                         # initComplete = JS(
-                         #                 "function(settings, json) {",
-                         #                  "$(this.api().table().header()).css({'color': '#fff'});",
-                         #                  "}"))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
-  # }%>% datatable(selection=list(target="row"),
-  #                  options = list(scrollX = TRUE,
-  #                                paginate = T,
-  #                                 lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),
-  #                                 pageLength = 10,
-  #                                 initComplete = JS(
-  #                                   "function(settings, json) {",
-  #                                   "$(this.api().table().header()).css({'color': '#fff'});",
-  #                                   "}")
-  #                  ))%>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
+
   
 
   # Reactive expression to create data frame of all input values ----
@@ -134,49 +109,41 @@ output$col <- renderTable({
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
 
-
-observeEvent(input$button, {
-  # Show a modal when the button is pressed
-  shinyalert("calculating.....please wait", type = "info",showConfirmButton = TRUE,
-             showCancelButton = TRUE,
-             confirmButtonText = "OK",
-             cancelButtonText = "Cancel",callbackR = function(x) {
-               global$response <- x
-             }
-  )
-  enable("button1")
+Main<-reactive({
+  
+    Classifier(original_data(),  method(),trees())
+  
 })
 
-Main<-reactive({
-  input$button
-  isolate(if(global$response==T){
-Classifier(original_data(),  method(),trees())
-  } else  return(NULL)
-  )
-    })
 
-
-# Show the values in an HTML table ----
-output$Reduced_data <- renderDataTable({
-  input$button
-  isolate(if(global$response==T){
-    
-    withProgress({Main()$Reduced_data},
-                 message = 'Function Running', value = 0.8  )
-      
-  
-  } else  return(NULL)
-  )
-}%>% datatable(selection=list(target="row"),
-               options = list(scrollX = TRUE,
-                              paginate = T,
-                              lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
-                              pageLength = 10,
-                              initComplete = JS(
-                                "function(settings, json) {",
-                                "$(this.api().table().header()).css({'color': '#fff'});",
-                                "}")
-               )) %>% DT::formatStyle(columns = names(Main()$Reduced_data), color="blue"))
+# Submit Calculate Parameter Button
+observeEvent(input$button, {
+            isolate({
+               # Show a modal when the button is pressed
+               shinyalert("calculating.....please wait", type = "info",showConfirmButton = TRUE,
+                          showCancelButton = TRUE,
+                          confirmButtonText = "OK",
+                          cancelButtonText = "Cancel",callbackR = function(x) {
+                            global$response <- x
+                          }
+               )
+               output$Reduced_data <- renderDataTable({ 
+                 if(is.null(original_data())){return()}
+                 
+                 Main()$Reduced_data
+               },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
+               
+               withProgress({Main()$Reduced_data},message = 'Function Running', value = 0.8  )
+               
+               # Switches to Reduced Dataset after variable election tab if User is in Method specification and when model has finished running.
+               if(input$tabs == 'specification') {
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "download")
+               }
+               
+            }) 
+            
+})
 
 
 output$colred <- renderTable({
@@ -436,21 +403,23 @@ observeEvent(input$evolve, {
   enable("restart_evolution")
 })
 
+
 observeEvent(input$seed, {
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Test_data)
   #output$crucial_values <- renderDataTable(crucial_values)})
   #output$crucial_values = renderDT(crucial_values, options = list())
-  output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
-                                                                options = list(scrollX = TRUE,
-                                                                               #scrolly = TRUE,
-                                                                               paginate = T,
-                                                                               lengthMenu = c(5, 10, 15),
-                                                                               pageLength = 15,
-                                                                               initComplete = JS(
-                                                                                 "function(settings, json) {",
-                                                                                 "$(this.api().table().header()).css({'color': '#fff'});",
-                                                                                 "}")
-  )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
+  output$crucial_values = renderDataTable({  crucial_values},options = list(pageLength=10, lengthMenu = c(5, 10, 15),scrollX = TRUE, paginate = T))
+    # renderDT(crucial_values %>% datatable(selection=list(target="cell"),
+    #                                                             options = list(scrollX = TRUE,
+    #                                                                            #scrolly = TRUE,
+    #                                                                            paginate = T,
+    #                                                                            lengthMenu = c(5, 10, 15),
+    #                                                                            pageLength = 15,
+    #                                                                            initComplete = JS(
+    #                                                                              "function(settings, json) {",
+    #                                                                              "$(this.api().table().header()).css({'color': '#fff'});",
+    #                                                                              "}")
+  #)) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
   enable("evolve")
   seeded_evolution <<- TRUE
 })
@@ -525,7 +494,7 @@ observeEvent(input$update_tree, {
     for (node in best_tree_nodes){
       label = (toString(node))
       color="lightblue"
-      font_color = "white"
+      font_color = "black"
       if (node$'is_terminal'() == TRUE){
         shape="square"
       }

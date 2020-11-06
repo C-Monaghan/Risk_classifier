@@ -20,8 +20,8 @@ shinyUI(ui = tagList(
   withMathJax(),
 
   navbarPage(
-
-    theme = shinytheme("slate"),  # <--- To use a theme, uncomment this
+#flatly
+    theme = shinytheme("flatly"),  # <--- To use a theme, uncomment this
     strong("MI based classifier"), # Main title name
 
 
@@ -193,10 +193,10 @@ shinyUI(ui = tagList(
                           ),
               mainPanel(tabsetPanel(type="tab",
                                     tabPanel("Set of available splits",
-                                             #dataTableOutput("crucial_values")),
+                                             dataTableOutput("crucial_values")),
                                              actionButton("remove_split",
                                                           "Remove selected values"),
-                                             DTOutput("crucial_values")),
+                                             #dataTableOutput("crucial_values")),
                                              
                                     tabPanel("Progress charts",
                                              plotOutput("evolution_progress"),
