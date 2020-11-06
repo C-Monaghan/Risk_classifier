@@ -284,7 +284,7 @@ output$down1<-downloadHandler(
 
 
 
-use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+#use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
 #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 
 source_python("Source_EA.py")
@@ -315,7 +315,7 @@ initiate_ea <- function(forest,dataset) {
   
   bad_trees_count=0
   for (Ctree in forest) {
-    if (nrow(Ctree$frame) < 2){
+    if (nrow(Ctree$frame) < 5){
       #print(tree.size(Ctree))
       bad_trees_count = bad_trees_count+1
     }
@@ -365,7 +365,7 @@ observeEvent(input$evolve, {
                    current_best_value <- PDT$'get_best_value_for_objective'()
                    current_mean_value <- PDT$'get_population_mean_for_objective'()
                    #current_best_tree_nodes <- PDT$'get_best_value_for_objective'(objective_index = nodes_objective_index)
-                   current_best_tree_nodes <- PDT$'get_best_individual'()$'objective_values'[[nodes_objective_index+1]]
+                   current_best_tree_nodes <- PDT$'get_best_individual'(objective_index=0)$'objective_values'[[nodes_objective_index+1]]
                    current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
                    update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
                    incProgress(1/input$generations)
@@ -375,7 +375,7 @@ observeEvent(input$evolve, {
 })
 
 observeEvent(input$seed, {
-  crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Test_data)
+  crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
   #output$crucial_values <- renderDataTable(crucial_values)})
   #output$crucial_values = renderDT(crucial_values, options = list())
   output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
@@ -449,7 +449,7 @@ output$evolution_progress_nodes <- renderPlot({
 observeEvent(input$update_tree, {
   output$network <- renderVisNetwork({
     PDT$'evaluate_population'()
-    best_tree <- PDT$'get_best_individual'()$'genotype'
+    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
     best_tree_nodes <- best_tree$'get_subtree_nodes'()
     #length(best_tree_nodes)
     connections <- best_tree$'get_connections'()
