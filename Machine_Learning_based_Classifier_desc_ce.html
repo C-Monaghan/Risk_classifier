@@ -19,6 +19,11 @@
 <li><h4><strong> Step1: - Feature Selection (can be done for prediction accuracy, model interpretability and multi-collinearity) : </strong></h4></li>
 <ul>
   <li><h5> Shrinkage : Fitting a model with all the 'p' predictors and estimated coefficients are shrunken towards zero so known as regularization has the effect of reducing variance. E.g. Lassso or Ridge Regression.</h5></li>
+  <h5> When to use them:</h5>
+  <ul>
+  <li><h6><strong> Prediction Accuracy:</strong> especially when p>n, to control the variacne.</h6></li>
+  <li><h6><strong> Model Interpretability:</strong> To remove irrelevant features, i.e. by setting the corresponding coefficients estimates to zero, we can obtain a model that is more easily interpreted.</h6></li>
+  </ul>
   <li><h5>  Multi-collinearity between predictors variables : Identify the idependent variables in a model which are correlated, but to have a more interpretable model, you should avoid features that have a very high (~R² > .8) being contained in the features.</h5></li>
 </ul>
   
