@@ -21,6 +21,7 @@ from inspect import signature
 import pandas as pd
 import copy
 import statistics as st
+from collections import defaultdict 
 
 text_to_operator = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
 operator_to_text = {op.lt:"<",op.ge:">=",op.le:"<=",op.gt:">",op.eq:"==",op.ne:"!="}
@@ -56,24 +57,17 @@ class Individual: #missing __lt__ and __eq__
 			generation_of_creation,
 			genotype,
 			n_objectives = 0,
-			phenotype = None,
-			n_dominators = None,                 #used in MOEA, pareto dominance
-			n_dominated_solutions = None,        #used in MOEA, pareto dominance
-			dominated_solutions = None,          #used in NSGA-II
-			local_crowding_distance = None,      #used in NSGA-II
-			non_domination_rank = None):          #used in NSGA-II
+			phenotype = None):
 
 		self.generation_of_creation = generation_of_creation
 		self.genotype = genotype
 		self.phenotype = phenotype
-		self.n_dominators = n_dominators
-		self.n_dominated_solutions = n_dominated_solutions
-		self.dominated_solutions = dominated_solutions
-		self.local_crowding_distance = local_crowding_distance
-		self.non_domination_rank = non_domination_rank
+		
 		self.evaluated_on_static_objectives = False
-		self.nodes = [] #usage: speed
-
+		self.rank = None                                 #used in NSGA-II
+		self.dominated_solutions = []                    #used in NSGA-II
+		self.domination_counter = None                   #used in NSGA-II
+		self.crowding_distance = None                    #used in NSGA-II
 		self.objective_values = [None for _ in range(n_objectives)]
 
 	def change_n_objectives(self, new_n_objectives):
@@ -117,8 +111,12 @@ class DT_Node:
 		"""
 		children are sorted: the first one is the true, the second one is the false
 		"""
-		self.updated=False #only used when parsing trees from R
+		#Initial values
+		self.visits_count = 0
+		self.gini_index = None
 		self.parent=parent
+		#All the following variables need to be copied by the copy() function
+		self.updated=False #only used when parsing trees from R
 		self.children = []
 		self.children_names = []
 		self.output_label = None
@@ -127,18 +125,26 @@ class DT_Node:
 		self.operator_name = None
 		self.comparable_value = None
 		self.comparable_value_index = None
-		self.visits_count = 0
+		self.initial_output_label_count = {}
 		self.output_label_count = {}
-		self.gini_index = None
-		#self.class_count = {
 
-	def update(self,attribute,comparable_value_index,comparable_value,operator,operator_name): #only used when parsing trees from R
+	def update(self,attribute,comparable_value_index,comparable_value,operator,operator_name, output_labels): #only used when parsing trees from R
 		self.updated = True
 		self.attribute = attribute
 		self.comparable_value = comparable_value #float(self.attribute.crucial_values[comparable_value_index]) #all are floats rn
 		self.comparable_value_index = comparable_value_index
 		self.operator = operator
 		self.operator_name = operator_name
+		self.initial_output_label_count = {label:0 for label in output_labels}
+		self.output_label_count = {label:0 for label in output_labels}
+
+	def reset_numbers(self):
+		self.visits_count = 0
+		self.output_label_count = {key:value for key,value in self.initial_output_label_count.items()}
+
+	def reset_tree_numbers(self):
+		for node in self.get_subtree_nodes():
+			node.reset_numbers()
 
 	def add_child(self,name,child,index=None):
 		child.parent = self
@@ -160,9 +166,18 @@ class DT_Node:
 		index = self.children.index(old_child)
 		self.add_child(name = self.children_names[index], child = new_child, index = index)
 
-	def evaluate(self,data_row):
+	def get_gini_index(self):
+		if self.visits_count > 0:
+			gini = 1 - sum([(label_count/self.visits_count)**2 for label_count in self.output_label_count.values()])
+			return gini
+		else:
+			return None
+
+	def evaluate(self,data_row, label):
 		self.visits_count = self.visits_count + 1
 		if self.output_label is None:
+			#self.output_label_count = [self.output_label_count]
+			self.output_label_count[label] = self.output_label_count[label] + 1
 			try:
 				comparison = self.operator(data_row.iloc[self.attribute.index],self.comparable_value)
 			except:
@@ -171,10 +186,10 @@ class DT_Node:
 
 			if comparison == True:
 				#print("Going to child", self.children_names[0])
-				return self.children[0].evaluate(data_row) #can be improved
+				return self.children[0].evaluate(data_row, label) #can be improved
 			else:
 				#print("Going to child", self.children_names[1])
-				return self.children[1].evaluate(data_row)
+				return self.children[1].evaluate(data_row, label)
 
 		else:
 			#print("Output:",self.output_label)
@@ -259,19 +274,57 @@ class DT_Node:
 		the_copy.operator_name = self.operator_name
 		the_copy.comparable_value = self.comparable_value
 		the_copy.comparable_value_index = self.comparable_value_index
+		the_copy.initial_output_label_count = {k:v for k,v in self.initial_output_label_count.items()}
+		the_copy.output_label_count = {k:v for k,v in self.output_label_count.items()}
 
 		for child in self.children:
 			copy_child = child.copy(parent=the_copy)
 			the_copy.children.append(copy_child)
-			#the_copy.add_child(name=self.children_names[child_index], child=copy_child)
 
 		return the_copy
+
+	"""
+	def im_useless(self):
+		im_useless = False
+		for child_index, child in enumerate(self.children):
+			if child.visits == 0:
+				if im_useless:
+					print("This should not be reached.")
+				im_useless = True
+				bad_child_index = child_index
+			else:
+				good_child_index = child_index
+		return im_useless, bad_child_index, good_child_index
+
+	def clean_subtree(self):
+		if self.is_root():
+			im_useless = False
+		else:
+			im_useless, bad_child_index, good_child_index = self.im_useless()
+			
+		if im_useless:
+			if self.children[good_child_index].is_terminal():
+				my_replacement = self.children[good_child_index]
+				self.parent.replace_child()
+			else:
+				self.find_
+		else:
+			for child in self.children:
+				child.clean_subtree()
+
+	def clean_redundancies(self):
+	"""
 
 	def __str__(self):
 			if self.is_terminal():
 				return "Class: " + str(self.output_label) + "\nVisits:" + str(self.visits_count)
 			else:
-				return self.attribute.name +"\n"+ self.operator_name + "\n"+ str(self.comparable_value) + "\nVisits:" + str(self.visits_count)
+				gini = self.get_gini_index()
+				if gini is None:
+					gini_string = "N/A"
+				else:
+					gini_string = "%.2f"%gini
+				return self.attribute.name +"\n"+ self.operator_name + str(self.comparable_value) + "\nVisits:" + str(self.visits_count) + "\nGini:" + gini_string
 
 	#def __eq__(self, other):
 
@@ -281,9 +334,9 @@ class DecisionTree_EA: #oblique, binary trees
 		self.output_labels = []
 		self.current_generation = 0
 		self.unique_output_labels = []
-		self.attributes = {}
+		self.attributes = {}                                                                      #{attribute index : attribute class object}
 		self.operators = []
-		self.objectives = {}
+		self.objectives = {}                                                                      #{objective index : objective class object}
 		self.n_objectives = 0
 		self.generation = 0
 		self.population = []
@@ -301,6 +354,7 @@ class DecisionTree_EA: #oblique, binary trees
 		self.crossovers = 0
 		self.mutations = 0
 		self.elites = 0
+		self.fronts = defaultdict(lambda:[])                   #used in NSGA-II
 
 	def add_operator(self,operator_name): #operators with compatibility to certain attributes?
 		if operator_name not in self.operators:
@@ -329,11 +383,31 @@ class DecisionTree_EA: #oblique, binary trees
 					ind.change_n_objectives(new_n_objectives = self.n_objectives)
 			print("Added objective ", objective_name)
 
+	def add_attribute(self, name, index):
+		self.attributes[name] = Attribute(index=index, name=name)
+		print("added attribute ",name)
+
 	def remove_objective(self, objective_name):
 		if len(self.objectives.items()) > 0:
+			"""
+			The objective object with name=objective_name is removed from self.objectives
+			"""
+			#Try to remove the objective
 			self.objectives = {key:val for key, val in self.objective.items() if val.name != objective_name}
+			
+			#Ensure that the keys of the objectives start from 0: 
+			counter = 0
+			temp_objectives = {}
+			for old_key, objective in self.objectives.items():
+				temp_objectives[counter] = objective
+				counter = counter + 1
+			self.objectives = temp_objectives
+			
+			#Update the individuals if the number of objectives changed
 			if self.n_objectives != len(self.objectives.items()):
 				self.n_objectives = len(self.objectives.items())
+				for individual in self.population:
+					individual.change_n_objectives(self.n_objectives)
 				print("Removed objective ", objective_name)
 			else:
 				print("The objective was not being considered")
@@ -395,7 +469,8 @@ class DecisionTree_EA: #oblique, binary trees
 					comparable_value_index=comparable_value_index,
 					comparable_value=comparable_value,
 					operator=operator,
-					operator_name=operator_name)
+					operator_name=operator_name,
+					output_labels=self.unique_output_labels)
 
 		return node
 
@@ -404,17 +479,22 @@ class DecisionTree_EA: #oblique, binary trees
 		terminal_node.output_label = rd.choice(list(self.unique_output_labels))
 		return terminal_node
 
-	def generate_random_tree(self,max_depth=3, method = "Grow"): #missing adding names (might not be needed)
-		if max_depth == 0:
+	def generate_random_tree(self,max_depth=6, min_depth=4, current_depth=0, method = "Grow"): #missing adding names (might not be needed)
+		if max_depth == current_depth:
 			return self.generate_random_terminal()
 		else:
 			root = self.generate_random_node()
 			if method == "Grow":
 				for i in range(2):
-					if rd.choice([True,False]):
-						child = self.generate_random_tree(max_depth = max_depth-1, method = method)
+					if current_depth < min_depth:
+						need_terminal = False
 					else:
+						need_terminal = rd.choice([True,False])
+					if need_terminal:
 						child = self.generate_random_terminal()
+					else:
+						child = self.generate_random_tree(max_depth=max_depth, min_depth=min_depth, current_depth=current_depth+1, method = method)
+						
 					root.add_child(name=None,child=child)
 		return root
 
@@ -424,16 +504,17 @@ class DecisionTree_EA: #oblique, binary trees
 
 	def _run_generation(self):
 		"""
-		Runs a single generation of evolution
+		Runs a single generation of evolution: updates self.population and evaluates the individuals
 		Evaluates the population if generation == 0, otherwise assumes that the population is already evaluated
 		"""
 		if self.generation == 0:
 			self.evaluate_population()
+			self._fast_nondominated_sort()
 			pop_size = len(self.population)
 			self.crossovers = int(pop_size * self.crossover_rate / 2)
 			self.mutations = int(pop_size * self.mutation_rate)
 			self.elites = int(pop_size * self.elitism_rate)
-
+			
 		self.generation = self.generation + 1
 		newgen_pop = []
 		for i in range(self.crossovers):
@@ -443,12 +524,26 @@ class DecisionTree_EA: #oblique, binary trees
 		for i in range(self.mutations):
 			parent = self.tournament_selection()
 			newgen_pop.append(self.mutate(parent))
-		sorted_competitors = self._sort_individuals()
-		newgen_pop.extend(sorted_competitors[:self.elites])
-		self.population = newgen_pop
-		self.evaluate_population()
+		
+		if self.n_objectives > 1:
+			#Runs NSGA-II. Elitism is not taken into account
+			self.evaluate_population(population = newgen_pop)
+			extended_population = self.population.extend(newgen_pop)
+			self._fast_nondominated_sort(population = extended_population)
+			pop_size = len(self.population)
+			sorted_competitors = self._multiobjective_sort_individuals(population = extended_population)
+			self.population = sorted_competitors[:pop_size]
+		else:
+			sorted_competitors = self._sort_individuals()
+			newgen_pop.extend(sorted_competitors[:self.elites])
+			self.population = newgen_pop
+			self.evaluate_population()
 
-	def tournament_selection(self): #population could be sorted before to avoid repetition
+	def tournament_selection(self):
+		"""
+		Self.tournament_size individuals are randomly sampled from self.population.
+		The fittest one in them is returned.
+		"""
 		competitors = rd.sample(self.population, self.tournament_size)
 		winner = self.get_best_individual(population = competitors)
 		return winner
@@ -460,13 +555,10 @@ class DecisionTree_EA: #oblique, binary trees
 		if data is None:
 			data = self.data
 		output_array = []
-		#restart the visit count in each node
-		#tree_family = root_node.get_subtree_nodes()
-		#for node in tree_family:
-		#	node.visits_count = 0
-
-		for index, row in data.iterrows():
-			output_array.append(root_node.evaluate(row))
+		root_node.reset_tree_numbers()
+		for index, row in enumerate(data.iterrows()):
+			#print("label", self.output_labels[index])
+			output_array.append(root_node.evaluate(data_row=row[1], label=self.output_labels[index]))
 		return output_array
 
 	def calculate_accuracy(self, model_output_labels):
@@ -477,15 +569,17 @@ class DecisionTree_EA: #oblique, binary trees
 		accuracy = corrects / (i+1)
 		return accuracy
 
-	def evaluate_population(self, provisional_data = None): #CHANGE: needs many
-		if provisional_data is None:
-			data = self.data
-		#evaluate individual for static objective values:
+	def evaluate_population(self, population = None):
+		"""
+		Updates the objective_values of all the individuals
+		"""
+		if population is None:
+			population = self.population
 		for objective_index, objective in self.objectives.items():
-			for ind in self.population:
-				if not ind.evaluated_on_static_objectives:
+			for ind in population:
+				if not ind.evaluated_on_static_objectives: #A boolean value that prevents from evaluating twice a same individual
 					if objective.objective_name == "accuracy":
-						labels = self.evaluate_tree(ind.genotype, data = data)
+						labels = self.evaluate_tree(ind.genotype, data = self.data)
 						objective_value = self.calculate_accuracy(model_output_labels=labels)
 						#ind.objective_values[objective_index] = objective_value	 #will cause weird errors
 						ind.objective_values = [old_value if i!=objective_index else objective_value for i,old_value in enumerate(ind.objective_values)]
@@ -494,23 +588,26 @@ class DecisionTree_EA: #oblique, binary trees
 						#ind.objective_values[objective_index] = objective_value
 						ind.objective_values = [old_value if i!=objective_index else objective_value for i,old_value in enumerate(ind.objective_values)]
 
-		for ind in self.population:
+		for ind in population:
 			ind.evaluated_on_static_objectives = True
-			#ind.objective_values[0] = accuracy how come this didn´t work
 
-	def adapt_to_data(self, labels, data): #missing test_data
-		self.data = pd.DataFrame(data)
+	def adapt_to_data(self, labels, data):
+		"""
+		Updates the dataset and adds attributes to play with
+		"""
+		self.update_dataset(labels = labels, data = data)
 		for i, attribute in enumerate(self.data.columns):
 			self.add_attribute(name = attribute, index = i)
-			#self.attributes[attribute] = Attribute(index=i, name=attribute)
+		self.unique_output_labels = set(self.output_labels)
+		print("Adapted to a dataset with ",str(len(self.attributes.keys()))," attributes and ",str(len(self.data.index))," rows")
+		print("Classes: ",self.unique_output_labels)
+		
+	def update_dataset(self,labels,data):
+		"""
+		This functoin should only be used to insert data that has the same structure from the previous one (i.e. swapping train and test)
+		"""
+		self.data = pd.DataFrame(data)
 		self.output_labels = list(labels)
-		self.unique_output_labels = set(list(labels))
-		self.dataset = data
-		print("unique_output_labels",self.unique_output_labels)
-
-	def add_attribute(self, name, index):
-		self.attributes[name] = Attribute(index=index, name=name)
-		print("added attribute ",name)
 
 	def remove_attribute(self,name): #CHANGE: missing
 		pass
@@ -556,7 +653,8 @@ class DecisionTree_EA: #oblique, binary trees
 									comparable_value_index=comparable_value_index,
 									comparable_value=comparable_value,
 									operator=operator,
-									operator_name=operator_name)
+									operator_name=operator_name,
+									output_labels=self.unique_output_labels)
 					child = node.add_new_child(name=comparison)
 				#if n_comparisons == comp_idx:
 				node = child
@@ -603,11 +701,17 @@ class DecisionTree_EA: #oblique, binary trees
 		at_values = [attribute.crucial_values for attribute in self.attributes.values()]
 		return at_values
 
-	def get_best_individual(self, population = None, objective_index = 0):#, n = 1):
+	def get_best_individual(self, population = None, objective_index = None):
 		if population is None:
 			population = self.population
-		sorted_competitors = self._sort_individuals(population = population, objective_index = int(objective_index))
-		return sorted_competitors[0]#:n]
+		if objective_index is None:
+			if self.n_objectives > 1:
+				sorted_competitors = self._multiobjective_sort_individuals(population = population)
+			else:
+				sorted_competitors = self._sort_individuals(population = population, objective_index = 0)
+		else:
+			sorted_competitors = self._sort_individuals(population = population, objective_index = int(objective_index))
+		return sorted_competitors[0]
 
 	def get_best_value_for_objective(self, population = None, objective_index = 0):
 		objective_index = int(objective_index)
@@ -623,12 +727,88 @@ class DecisionTree_EA: #oblique, binary trees
 		return mean
 
 	def _sort_individuals(self, population = None, objective_index = 0):
+		"""
+		Sorts the poopulation according to the objective object in self.objectives[objective_index]
+		"""
 		if population is None:
 			population = self.population
-		current_objective = self.objectives[int(objective_index)]
-
-		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[int(objective_index)], reverse = current_objective.to_max)
+		
+		objective_index = int(objective_index)
+		current_objective = self.objectives[objective_index]
+		sorted_competitors = sorted(population, key=lambda ind: ind.objective_values[objective_index], reverse = current_objective.to_max)
 		return sorted_competitors
+
+	def _fast_nondominated_sort(self, population = None):
+		"""
+		Method proposed in the NSGA-II paper
+		Updates self.fronts and the NSGA-II values in the individuals
+		Is skipped if there are less than 2 objectives
+		"""
+		if self.n_objectives > 1:
+			if population is None:
+				population = self.population
+				
+			self.fronts = defaultdict(lambda:[])
+			for p in population:
+				p.dominated_solutions = []
+				p.domination_counter = 0
+				for q in population:
+					if self._dominates(p,q):
+						p.dominated_solutions.append(q)
+					elif self._dominates(q,p):
+						p.domination_counter = p.domination_counter + 1
+				if p.domination_counter == 0:
+					p.rank = 1
+					self.fronts[1].append(p)
+			
+			front_index = 1
+			while self.fronts[front_index] != []:
+				temporal_front = []
+				for p in self.fronts[front_index]:
+					for q in p.dominated_solutions:
+						q.domination_counter = q.domination_counter - 1
+						if q.domination_counter == 0:
+							q.rank = front_index + 1
+							temporal_front.append(q)
+				front_index = front_index + 1
+				self.fronts[front_index] = temporal_front
+				
+			self._set_crowding_distances(population = population)
+				
+	def _set_crowding_distances(self, population = None):
+		if population is None:
+			population = self.population
+		
+		for individual in population:
+			individual.crowding_distance = 0
+		
+		for objective_index in range(self.n_objectives):
+			sorted_population = self._sort_individuals(population = population, objective_index = objective_index)
+			sorted_population[0].crowding_distance = np.inf
+			sorted_population[-1].crowding_distance = np.inf
+			for individual_index, individual in enumerate(sorted_population[1:-1]):
+				individual.crowding_distance = individual.crowding_distance + abs((sorted_population[individual_index + 2].objective_values[objective_index] - sorted_population[individual_index].objective_values[objective_index])) 
+	
+	def _dominates(self, p, q):
+		for objective_index, objective in self.objectives.items():
+			if objective.to_max:
+				if p.objective_values[objective_index] <= q.objective_values[objective_index]:
+					return False
+			else:
+				if p.objective_values[objective_index] >= q.objective_values[objective_index]:
+					return False
+		return True
+		
+	def _multiobjective_sort_individuals(self, population = None):
+		"""
+		Sorts the population according to the rank in first place, then the crowding distance.
+		Sorting method's stability allows to separate the sort in twi steps
+		"""
+		if population is None:
+			population = self.population
+		sorted_individuals = sorted(population, key=op.attrgetter("crowding_distance"), reverse = True)
+		sorted_individuals = sorted(sorted_individuals, key=op.attrgetter("rank"))
+		return sorted_individuals
 
 	def restart_evolution(self):
 		self.current_generation = 0
