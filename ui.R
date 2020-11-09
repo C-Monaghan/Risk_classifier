@@ -124,7 +124,9 @@ shinyUI(ui = tagList(
                                                    
                                        # Downloading the file type
                                        h5("3.Select the type of plot to be downloaded:",align="centre"),          
-                                       radioButtons("filetype","Select the file type",choices = list("pdf","png"))
+                                       radioButtons("filetype","Select the file type",choices = list("png","pdf"),selected = "pdf"),
+                                      actionButton("return_parameter_button", "Return to Method Specification",
+                                                   width = "100%", class = "btn-default")
                                       ),
 )
     ),  # Main panel for displaying outputs ----

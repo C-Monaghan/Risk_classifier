@@ -49,7 +49,7 @@ shinyServer(function(input, output, session){
       stringsAsFactors = FALSE)
 
   })
-  # Dynamically adjust PPCA Main layout width
+  # Dynamically adjust Usage guide Main layout width
   observeEvent(input$tabs, {
     if(input$tabs == 'steps') {
       removeClass("main_layout", "col-sm-9")
@@ -84,7 +84,14 @@ shinyServer(function(input, output, session){
                })
   )
   
- 
+  # Return Parameter button from View dataset tab
+  observeEvent(input$return_parameter_button,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "specification")
+               })
+  )
+
  method<-reactive({
    input$method
  })
@@ -171,7 +178,8 @@ output$plot<-renderPlot({
   if(option()=="ind_max_acc"){
   isolate(if(global$response==T){
 
-    withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)},
+    withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
+                             branch.lty=3, shadow.col="gray", nn=TRUE)},
                  message = 'Making plot', value = 0.5 )
   }
   else  return(NULL)
@@ -179,7 +187,8 @@ output$plot<-renderPlot({
   }else if (option()=="ind_min_gini") {
     isolate(if(global$response==T){
       
-      withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)},
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
                    message = 'Making plot', value = 0.5 )
         
       
@@ -190,7 +199,8 @@ output$plot<-renderPlot({
     isolate(if(global$response==T){
   
       
-      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)},
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
                    message = 'Making plot', value = 0.5  )
     }
     else  return(NULL)
@@ -277,7 +287,8 @@ output$down1<-downloadHandler(
       png(file)
     else
       pdf(file)
-    rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)
+    rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
+               branch.lty=3, shadow.col="gray", nn=TRUE)
     dev.off()
     }
     else  if(option()=="ind_min_gini"){
@@ -285,7 +296,8 @@ output$down1<-downloadHandler(
         png(file)
       else
         pdf(file)
-      rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)
+      rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
+                 branch.lty=3, shadow.col="gray", nn=TRUE)
       dev.off()
     }
     else {
@@ -293,7 +305,8 @@ output$down1<-downloadHandler(
         pdf(file)
       else
         png(file)
-      rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)
+      rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
+                 branch.lty=3, shadow.col="gray", nn=TRUE)
       dev.off()
     }
   }
@@ -408,7 +421,7 @@ observeEvent(input$seed, {
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Test_data)
   #output$crucial_values <- renderDataTable(crucial_values)})
   #output$crucial_values = renderDT(crucial_values, options = list())
-  output$crucial_values = renderDataTable({  crucial_values},options = list(pageLength=10, lengthMenu = c(5, 10, 15),scrollX = TRUE, paginate = T))
+  output$crucial_values = renderDataTable({ crucial_values}%>% datatable(selection=list(target="cell"),options = list(pageLength=10, lengthMenu = c(5, 10, 15),scrollX = TRUE, paginate = T)))
     # renderDT(crucial_values %>% datatable(selection=list(target="cell"),
     #                                                             options = list(scrollX = TRUE,
     #                                                                            #scrolly = TRUE,
