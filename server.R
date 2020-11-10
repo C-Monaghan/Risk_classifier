@@ -101,7 +101,7 @@ shinyServer(function(input, output, session){
  })
 
 
-global <- reactiveValues(response = FALSE)
+global <- reactiveValues(response=FALSE)
 
 # Show the values in an HTML table ----
 output$values <- renderTable({
@@ -122,23 +122,40 @@ Main<-reactive({
   
 })
 
-
 # Submit Calculate Parameter Button
 observeEvent(input$button, {
-            isolate({
-               # Show a modal when the button is pressed
-               shinyalert("calculating.....please wait", type = "info",showConfirmButton = TRUE,
-                          showCancelButton = TRUE,
-                          confirmButtonText = "OK",
-                          cancelButtonText = "Cancel",callbackR = function(x) {
-                            global$response <- x
-                          }
-               )
+  
+  # Show a modal when the button is pressed
+  shinyalert("calculating.....please wait", type = "success",showConfirmButton = TRUE,
+             showCancelButton = TRUE,
+             confirmButtonText = "OK",
+             cancelButtonText = "Cancel",
+             animation = TRUE,
+             callbackR = function(x) {
+               global$response <- x
+             })
+})
+  
+# Submit Calculate Parameter Button
+observeEvent(global$response, {
+            
+              if(global$response==F){
+                return() }
+            else {
                output$Reduced_data <- renderDataTable({ 
                  if(is.null(original_data())){return()}
                  
                  Main()$Reduced_data
                },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
+               
+               output$colred <- renderTable({
+                 
+                 
+                   colnames(Main()$Reduced_data)
+                
+               }, caption=paste("Reduced variables in the dataset"),
+               caption.placement = getOption("xtable.caption.placement", "top"),
+               caption.width = getOption("xtable.caption.width", NULL))
                
                withProgress({Main()$Reduced_data},message = 'Function Running', value = 0.8  )
                
@@ -148,20 +165,13 @@ observeEvent(input$button, {
                                    selected = "download")
                }
                
-            }) 
+            }
+             
             
+            
+
 })
 
-
-output$colred <- renderTable({
-  input$button
-  isolate(if(global$response==T){
- colnames(Main()$Reduced_data)
-  } else  return(NULL)
-  )
-}, caption=paste("Reduced variables in the dataset"),
-caption.placement = getOption("xtable.caption.placement", "top"),
-caption.width = getOption("xtable.caption.width", NULL))
 
 option<-reactive({
   input$button1
@@ -327,8 +337,7 @@ output$down1<-downloadHandler(
 
 
 #use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-
+use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 
 source_python("Source_EA.py")
 disable("evolve")
@@ -358,7 +367,7 @@ initiate_ea <- function(forest,dataset) {
   
   bad_trees_count=0
   for (Ctree in forest) {
-    if (nrow(Ctree$frame) < 5){
+    if (nrow(Ctree$frame) < 2){
       #print(tree.size(Ctree))
       bad_trees_count = bad_trees_count+1
     }
@@ -408,7 +417,7 @@ observeEvent(input$evolve, {
                    current_best_value <- PDT$'get_best_value_for_objective'()
                    current_mean_value <- PDT$'get_population_mean_for_objective'()
                    #current_best_tree_nodes <- PDT$'get_best_value_for_objective'(objective_index = nodes_objective_index)
-                   current_best_tree_nodes <- PDT$'get_best_individual'(objective_index=0)$'objective_values'[[nodes_objective_index+1]]
+                   current_best_tree_nodes <- PDT$'get_best_individual'()$'objective_values'[[nodes_objective_index+1]]
                    current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
                    update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
                    incProgress(1/input$generations)
@@ -419,7 +428,7 @@ observeEvent(input$evolve, {
 
 
 observeEvent(input$seed, {
-  crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
+  crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Test_data)
   #output$crucial_values <- renderDataTable(crucial_values)})
   #output$crucial_values = renderDT(crucial_values, options = list())
   output$crucial_values = renderDataTable({ crucial_values}%>% datatable(selection=list(target="cell"),options = list(pageLength=10, lengthMenu = c(5, 10, 15),scrollX = TRUE, paginate = T)))
@@ -494,7 +503,7 @@ output$evolution_progress_nodes <- renderPlot({
 observeEvent(input$update_tree, {
   output$network <- renderVisNetwork({
     PDT$'evaluate_population'()
-    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
+    best_tree <- PDT$'get_best_individual'()$'genotype'
     best_tree_nodes <- best_tree$'get_subtree_nodes'()
     #length(best_tree_nodes)
     connections <- best_tree$'get_connections'()
