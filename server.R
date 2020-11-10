@@ -116,15 +116,11 @@ output$col <- renderTable({
 caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
 
-Main<-reactive({
-  
-    Classifier(original_data(),  method(),trees())
-  
-})
+
 
 # Submit Calculate Parameter Button
 observeEvent(input$button, {
-  
+  # print(input$button)
   # Show a modal when the button is pressed
   shinyalert("calculating.....please wait", type = "success",showConfirmButton = TRUE,
              showCancelButton = TRUE,
@@ -135,39 +131,44 @@ observeEvent(input$button, {
                global$response <- x
              })
 })
+Main<-reactive({
   
+  Classifier(original_data(),  method(),trees())
+  
+})  
 # Submit Calculate Parameter Button
 observeEvent(global$response, {
-            
-              if(global$response==F){
-                return() }
-            else {
-               output$Reduced_data <- renderDataTable({ 
-                 if(is.null(original_data())){return()}
-                 
-                 Main()$Reduced_data
-               },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
+              if(isolate(global$response)==T){
                
-               output$colred <- renderTable({
-                 
-                 
-                   colnames(Main()$Reduced_data)
+                output$Reduced_data <- renderDataTable({ 
+                  if(is.null(original_data())){return()}
+                  
+                  Main()$Reduced_data
+                },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
                 
-               }, caption=paste("Reduced variables in the dataset"),
-               caption.placement = getOption("xtable.caption.placement", "top"),
-               caption.width = getOption("xtable.caption.width", NULL))
-               
-               withProgress({Main()$Reduced_data},message = 'Function Running', value = 0.8  )
-               
-               # Switches to Reduced Dataset after variable election tab if User is in Method specification and when model has finished running.
-               if(input$tabs == 'specification') {
-                 updateTabsetPanel(session, "tabs",
-                                   selected = "download")
-               }
-               
-            }
-             
-            
+                output$colred <- renderTable({
+                  
+                  
+                  colnames(Main()$Reduced_data)
+                  
+                }, caption=paste("Reduced variables in the dataset"),
+                caption.placement = getOption("xtable.caption.placement", "top"),
+                caption.width = getOption("xtable.caption.width", NULL))
+                
+                withProgress({Main()$Reduced_data},message = 'Function Running', value = 0.8  )
+                
+                # Switches to Reduced Dataset after variable selection tab if User is in Method specification and when model has finished running.
+                if(input$tabs == 'specification') {
+                  updateTabsetPanel(session, "tabs",
+                                    selected = "download")
+                }
+                global$response= FALSE
+              }
+  
+  
+            else { return(NULL) 
+              }
+              
             
 
 })
