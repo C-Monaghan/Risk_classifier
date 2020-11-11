@@ -198,33 +198,7 @@ shinyUI(ui = tagList(
                           checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
                           checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
                           checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)
-<<<<<<< HEAD
-             ),
-             mainPanel(tabsetPanel(type="tab",
-                                   tabPanel("Set of available splits",
-                                            dataTableOutput("crucial_values")),
-                                   actionButton("remove_split",
-                                                "Remove selected values"),
-                                   #dataTableOutput("crucial_values")),
-                                   
-                                   tabPanel("Progress charts",
-                                            plotOutput("pareto_front"),
-                                            plotOutput("evolution_progress"),
-                                            
-                                            plotOutput("evolution_progress_nodes")),
-                                   tabPanel("View trees",
-                                            actionButton("update_tree",
-                                                         "View best tree"),
-                                            visNetworkOutput("network", height = "800px", width = "800px"),
-                                            DTOutput("tree_partitions"))
-             )
-             )
-             
-    ),
-    
-    
-    
-=======
+
                           ),
               mainPanel(tabsetPanel(type="tab",
                                     tabPanel("Set of available splits",
@@ -250,7 +224,6 @@ shinyUI(ui = tagList(
 
 
 
->>>>>>> 9043ae3940de90c45c8b31f9e5ac77b73d78036c
     # About Us ----------------------------------------------------------------
     tabPanel("About Us",
              
