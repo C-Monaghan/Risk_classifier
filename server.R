@@ -102,7 +102,7 @@ shinyServer(function(input, output, session){
   
   
   global <- reactiveValues(response=FALSE)
-  global_plot <- reactiveValues(response=TRUE)
+  global_plot <- reactiveValues(value=TRUE)
   
   # Show the values in an HTML table ----
   output$values <- renderTable({
@@ -131,16 +131,6 @@ shinyServer(function(input, output, session){
                callbackR = function(x) {
                  global$response <- x
                })
-  })
-  observeEvent(input$button1, {
-    # Show a modal when the button is pressed
-    shinyalert("Showing plot.....please wait", type = "info",showConfirmButton = TRUE,
-               showCancelButton = TRUE,
-               confirmButtonText = "OK",
-               cancelButtonText = "Cancel",callbackR = function(x) {
-                 global_plot$response <- x
-               }
-    )
   })
   
   Main<-reactive({
@@ -186,60 +176,59 @@ shinyServer(function(input, output, session){
     
   })
   
+  observeEvent(input$button1, {
+    # Show a modal when the button is pressed
+    shinyalert("Showing plot.....please wait", type = "info",showConfirmButton = TRUE,
+               showCancelButton = FALSE,
+               confirmButtonText = "OK",
+               callbackR = function(x) {
+                 global_plot$value <- x
+               }
+    )
+  })
   
   option<-reactive({
-    input$button1
-    isolate(if(global_plot$response==T){
+  input$button1
+    isolate(if(global_plot$value==T){
       input$option
     }
     else  return(NULL)
     )
   })
-  observeEvent(global_plot$response, {
-    
-    if(isolate(global_plot$response)==T){
+  
+
       output$plot<-renderPlot({
-        print(global_plot$response)
+        
         
         if(option()=="ind_max_acc"){
-          isolate(if(global_plot$response==T){
-            
+          
             withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
                                      branch.lty=3, shadow.col="gray", nn=TRUE)},
                          message = 'Making plot', value = 0.5 )
-          }
-          else  return(NULL)
-          )
+          
         }else if (option()=="ind_min_gini") {
-          isolate(if(global_plot$response==T){
+         
             
             withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
                                      branch.lty=3, shadow.col="gray", nn=TRUE)},
                          message = 'Making plot', value = 0.5 )
             
-            
-          }
-          else  return(NULL)
-          )
         }else {
-          isolate(if(global_plot$response==T){
+          
             
             
             withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
                                      branch.lty=3, shadow.col="gray", nn=TRUE)},
                          message = 'Making plot', value = 0.5  )
-          }
-          else  return(NULL)
-          )
+          
         }
-      })
-    } else { return(NULL) 
-    }
-  })
+      }) 
+     
+   
   
   
   Values <- reactive({
-    
+    input$button1
     if(option()=="ind_max_acc"){
       
       data.frame(
@@ -272,7 +261,7 @@ shinyServer(function(input, output, session){
   
   output$res<-renderTable({
     input$button1
-    isolate(if(global$response==T){
+    isolate(if(global_plot$value==T){
       Values()
     }
     else  return(NULL)
