@@ -209,8 +209,7 @@ shinyUI(ui = tagList(
                                     tabPanel("Progress charts",
                                              plotOutput("pareto_front"),
                                              plotOutput("evolution_progress"),
-                                             #conditionalPanel(condition = "input.nodes_checkbox==TRUE",
-                                             #                 plotOutput("evolution_progress_nodes"))),
+                                          
                                              plotOutput("evolution_progress_nodes")),
                                     tabPanel("View trees",
                                              actionButton("update_tree",

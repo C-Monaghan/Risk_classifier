@@ -358,9 +358,9 @@ PDT <- DecisionTree_EA(tournament_size = 5,
 
 
 #use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 
-source_python("Source_EA.py")
+#source_python("Source_EA.py")
 
 disable("evolve")
 disable("restart_evolution")
@@ -447,7 +447,7 @@ update_reactive_variables <- function(){
     std_dev <- as.numeric(sd(current_gen_objective[,objective_name]))
     low <- mean_value - std_dev
     high <- mean_value + std_dev
-    reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Best",Value=best_value,Low=0,High=0))
+    reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Best",Value=best_value,Low=best_value,High=best_value))
     reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Mean",Value=mean_value,Low=low,High=high))
   }  
 }
@@ -570,7 +570,7 @@ observeEvent(input$seed, {
                                                                                pageLength = 15,
                                                                                initComplete = JS(
                                                                                  "function(settings, json) {",
-                                                                                 "$(this.api().table().header()).css({'color': '#fff'});",
+                                                                                 "$(this.api().table().header()).css({'color': '#000'});",
                                                                                  "}")
   )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
 
@@ -686,7 +686,7 @@ output$evolution_progress_nodes <- renderPlot({
 })
 
 output$pareto_front <- renderPlot({
-  current_gen<-max(pareto$Gen, na.rm = TRUE)
+  current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
   current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
   ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + 
     geom_point(size=6) +
