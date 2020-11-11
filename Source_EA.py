@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Sep 17 23:15:50 2020
-
 @author: Fred Valdez Ameneyro
-
 My Evolutionary Algorithm for Decision Trees
 Features:
 Evolution seeded with the output of existing methods
