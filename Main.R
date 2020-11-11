@@ -19,7 +19,11 @@ library(visNetwork)
 library(ggplot2)
 library(arsenal)
 library(hrbrthemes)
+<<<<<<< HEAD
 # library(profvis) for profiling
+=======
+ # library(profvis) for profiling
+>>>>>>> 9043ae3940de90c45c8b31f9e5ac77b73d78036c
 
 # Loading the dataset
 load("GermanCredit.Rdata")
