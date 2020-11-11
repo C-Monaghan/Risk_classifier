@@ -196,7 +196,6 @@ option<-reactive({
   )
 })
 observeEvent(global_plot$response, {
- 
   if(isolate(global_plot$response)==T){
 output$plot<-renderPlot({
   print(global_plot$response)

@@ -170,66 +170,66 @@ shinyUI(ui = tagList(
       )
        )
     ),
-    
-    ######################################################################################
-    ##########  EVOLUTIONARY ALGORITHM ###################################################
-    ######################################################################################
-    
-    tabPanel("Evolutionary Algorithm",
-              sidebarPanel(width = 3,
-                          sliderInput("generations",
-                                      "Generations",
-                                      min = 5,
-                                      max=100,
-                                      step = 5,
-                                      animate = TRUE,
-                                      value = 10),
-                          actionButton("seed",
-                                       "Initiate Genetic Program"),
-                          actionButton("restart_evolution",
-                                       "Restart evoution"),
-                          actionButton("evolve",
-                                       "Evolve"),
-                          actionButton("save_tree_python",
-                                       "Save current best tree"),
-                          actionButton("loade_tree_python",
-                                       "Load tree"),
-                          checkboxInput("accuracy_checkbox", "Accuracy", value = TRUE, width = NULL),
-                          checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
-                          checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
-                          checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)
-                          ),
-              mainPanel(tabsetPanel(type="tab",
-                                    tabPanel("Set of available splits",
-                                             dataTableOutput("crucial_values")),
-                                             actionButton("remove_split",
-                                                          "Remove selected values"),
-                                             #dataTableOutput("crucial_values")),
-                                             
-                                    tabPanel("Progress charts",
-                                             plotOutput("pareto_front"),
-                                             plotOutput("evolution_progress"),
-                                             #conditionalPanel(condition = "input.nodes_checkbox==TRUE",
-                                             #                 plotOutput("evolution_progress_nodes"))),
-                                             plotOutput("evolution_progress_nodes")),
-                                    tabPanel("View trees",
-                                             actionButton("update_tree",
-                                                          "View best tree"),
-                                             visNetworkOutput("network", height = "800px", width = "800px"),
-                                             DTOutput("tree_partitions"))
-                                    )
-                        )
 
-            ),
+######################################################################################
+##########  EVOLUTIONARY ALGORITHM ###################################################
+######################################################################################
 
-
-
-    # About Us ----------------------------------------------------------------
-    tabPanel("About Us",
+tabPanel("Evolutionary Algorithm",
+         sidebarPanel(width = 3,
+                      sliderInput("generations",
+                                  "Generations",
+                                  min = 5,
+                                  max=100,
+                                  step = 5,
+                                  animate = TRUE,
+                                  value = 10),
+                      actionButton("seed",
+                                   "Initiate Genetic Program"),
+                      actionButton("restart_evolution",
+                                   "Restart evoution"),
+                      actionButton("evolve",
+                                   "Evolve"),
+                      actionButton("save_tree_python",
+                                   "Save current best tree"),
+                      actionButton("loade_tree_python",
+                                   "Load tree"),
+                      checkboxInput("accuracy_checkbox", "Accuracy", value = TRUE, width = NULL),
+                      checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
+                      checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
+                      checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)
+         ),
+         mainPanel(tabsetPanel(type="tab",
+                               tabPanel("Set of available splits",
+                                        dataTableOutput("crucial_values")),
+                               actionButton("remove_split",
+                                            "Remove selected values"),
+                               #dataTableOutput("crucial_values")),
+                               
+                               tabPanel("Progress charts",
+                                        plotOutput("pareto_front"),
+                                        plotOutput("evolution_progress"),
+                                        #conditionalPanel(condition = "input.nodes_checkbox==TRUE",
+                                        #                 plotOutput("evolution_progress_nodes"))),
+                                        plotOutput("evolution_progress_nodes")),
+                               tabPanel("View trees",
+                                        actionButton("update_tree",
+                                                     "View best tree"),
+                                        visNetworkOutput("network", height = "800px", width = "800px"),
+                                        DTOutput("tree_partitions"))
+         )
+         )
+         
+),
 
 
 
-
-    )
+# About Us ----------------------------------------------------------------
+tabPanel("About Us",
+         
+         
+         
+         
+)
 
   )))
