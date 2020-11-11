@@ -102,6 +102,7 @@ shinyServer(function(input, output, session){
 
 
 global <- reactiveValues(response=FALSE)
+global_plot <- reactiveValues(response=TRUE)
 
 # Show the values in an HTML table ----
 output$values <- renderTable({
@@ -131,11 +132,23 @@ observeEvent(input$button, {
                global$response <- x
              })
 })
+observeEvent(input$button1, {
+  # Show a modal when the button is pressed
+  shinyalert("Showing plot.....please wait", type = "info",showConfirmButton = TRUE,
+             showCancelButton = TRUE,
+             confirmButtonText = "OK",
+             cancelButtonText = "Cancel",callbackR = function(x) {
+               global_plot$response <- x
+             }
+  )
+})
+
 Main<-reactive({
   
   Classifier(original_data(),  method(),trees())
   
 })  
+
 # Submit Calculate Parameter Button
 observeEvent(global$response, {
               if(isolate(global$response)==T){
@@ -176,18 +189,20 @@ observeEvent(global$response, {
 
 option<-reactive({
   input$button1
-  isolate(if(global$response==T){
+  isolate(if(global_plot$response==T){
   input$option
   }
   else  return(NULL)
   )
 })
-
+observeEvent(global_plot$response, {
+ 
+  if(isolate(global_plot$response)==T){
 output$plot<-renderPlot({
-  input$button1
+  print(global_plot$response)
   
   if(option()=="ind_max_acc"){
-  isolate(if(global$response==T){
+  isolate(if(global_plot$response==T){
 
     withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
                              branch.lty=3, shadow.col="gray", nn=TRUE)},
@@ -196,7 +211,7 @@ output$plot<-renderPlot({
   else  return(NULL)
   )
   }else if (option()=="ind_min_gini") {
-    isolate(if(global$response==T){
+    isolate(if(global_plot$response==T){
       
       withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
                                branch.lty=3, shadow.col="gray", nn=TRUE)},
@@ -207,7 +222,7 @@ output$plot<-renderPlot({
     else  return(NULL)
     )
   }else {
-    isolate(if(global$response==T){
+    isolate(if(global_plot$response==T){
   
       
       withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
@@ -218,17 +233,8 @@ output$plot<-renderPlot({
     )
   }
 })
-
-
-observeEvent(input$button1, {
-  # Show a modal when the button is pressed
-  shinyalert("Showing plot.....please wait", type = "info",showConfirmButton = TRUE,
-             showCancelButton = TRUE,
-             confirmButtonText = "OK",
-             cancelButtonText = "Cancel",callbackR = function(x) {
-               global$response <- x
-             }
-  )
+} else { return(NULL) 
+}
 })
 
 
