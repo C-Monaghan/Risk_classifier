@@ -23,18 +23,9 @@ import copy
 import statistics as st
 from collections import defaultdict 
 
-text_to_operator = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
-operator_to_text = {op.lt:"<",op.ge:">=",op.le:"<=",op.gt:">",op.eq:"==",op.ne:"!="}
-inverse_operators = {op.lt:op.ge,op.le:op.gt,op.gt:op.le,op.ge:op.lt,op.eq:op.ne}
-
-def get_arity(operator): #currrently not needed
-	"""
-	Returns the arity of the method, operator or funtion as an int
-	:param operator: is a method, operator or funtion
-	"""
-	sig = signature(operator)
-	arity = len(sig.parameters)
-	return arity
+#text_to_operator = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
+#operator_to_text = {op.lt:"<",op.ge:">=",op.le:"<=",op.gt:">",op.eq:"==",op.ne:"!="}
+#inverse_operators = {op.lt:op.ge,op.le:op.gt,op.gt:op.le,op.ge:op.lt,op.eq:op.ne}
 
 class Objective:
 	def __init__(self, objective_name, index, to_max = True, best = None, worst = None):
@@ -283,38 +274,6 @@ class DT_Node:
 
 		return the_copy
 
-	"""
-	def im_useless(self):
-		im_useless = False
-		for child_index, child in enumerate(self.children):
-			if child.visits == 0:
-				if im_useless:
-					print("This should not be reached.")
-				im_useless = True
-				bad_child_index = child_index
-			else:
-				good_child_index = child_index
-		return im_useless, bad_child_index, good_child_index
-
-	def clean_subtree(self):
-		if self.is_root():
-			im_useless = False
-		else:
-			im_useless, bad_child_index, good_child_index = self.im_useless()
-			
-		if im_useless:
-			if self.children[good_child_index].is_terminal():
-				my_replacement = self.children[good_child_index]
-				self.parent.replace_child()
-			else:
-				self.find_
-		else:
-			for child in self.children:
-				child.clean_subtree()
-
-	def clean_redundancies(self):
-	"""
-
 	def __str__(self):
 			if self.is_terminal():
 				return "Class: " + str(self.output_label) + "\nVisits:" + str(self.visits_count)
@@ -393,7 +352,7 @@ class DecisionTree_EA: #oblique, binary trees
 			The objective object with name=objective_name is removed from self.objectives
 			"""
 			#Try to remove the objective
-			self.objectives = {key:val for key, val in self.objective.items() if val.name != objective_name}
+			self.objectives = {key:val for key, val in self.objectives.items() if val.objective_name != objective_name}
 			
 			#Ensure that the keys of the objectives start from 0: 
 			counter = 0
@@ -410,18 +369,23 @@ class DecisionTree_EA: #oblique, binary trees
 					individual.change_n_objectives(self.n_objectives)
 				print("Removed objective ", objective_name)
 			else:
-				print("The objective was not being considered")
+				print("The objective ", objective_name," is not being considered")
 		else:
 			print("There are no objectives")
 
-	def one_point_crossover(self, individual1, individual2):
+	def _one_point_crossover(self, individual1, individual2):
+		"""
+		A random node in each tree is selected. The corresponding subtrees are swapped
+		"""
 		tree1 = individual1.genotype
 		tree2 = individual2.genotype
 
 		copy1 = tree1.copy()
 		copy2 = tree2.copy()
 
-		nodes1 = copy1.get_subtree_nodes(include_self = False, include_terminals = False) #no root node included
+		#There is a 50% chance to select a terminal to do the swap
+		include_terminals = rd.choice([True, False])
+		nodes1 = copy1.get_subtree_nodes(include_self = False, include_terminals = False)
 		nodes2 = copy2.get_subtree_nodes(include_self = False, include_terminals = False)
 
 		node1 = rd.choice(nodes1)
@@ -437,10 +401,11 @@ class DecisionTree_EA: #oblique, binary trees
 
 		return [new_individual1, new_individual2]
 
-	def generate_name_for_node(self): #missing, right now names are only relevant when parsing trees from R
-		pass
-
-	def mutate(self, individual):#missing, new nodes have no names for their children
+	def _single_point_mutation(self, individual):#missing, new nodes have no names for their children
+		"""
+		Changes the attribute, operator and value of the randomly selected node in the tree.
+		Terminals cannot be selected
+		"""
 		tree = individual.genotype
 		tree_copy = tree.copy()
 		nodes = tree_copy.get_subtree_nodes(include_self = False, include_terminals = False)
@@ -448,14 +413,29 @@ class DecisionTree_EA: #oblique, binary trees
 		new_node = self.generate_random_node()
 		unlucky_node.parent.replace_child(new_child=new_node, old_child=unlucky_node)
 		for child in unlucky_node.children:
-			new_node.add_child(name="Noname",child=child) #new_node.add_child(name=self.generate_name_for_node...,child)
-		#print("unlucky_node",unlucky_node)
-		#print("new_node",new_node)
-		#print("acc_old",str(self.calculate_accuracy(self.evaluate_tree(tree))))
-		#print("acc_new",str(self.calculate_accuracy(self.evaluate_tree(tree_copy))))
+			new_node.add_child(name="Noname",child=child)
 		new_individual = Individual(generation_of_creation = self.generation, genotype = tree_copy, n_objectives = self.n_objectives)
 		return new_individual
-
+		
+	def _subtree_mutation(self, individual):
+		"""
+		Swaps a randomly selected subtree in the individual with a randomly generated tree.
+		"""
+		tree = individual.genotype
+		tree_copy = tree.copy()
+		#50% chance to include the terminal as potential nodes to be swapped. 
+		#As terminals are the most common nodes in the trees and selecting them leads to bloat
+		include_terminals = rd.choice([True, False])
+		nodes = tree_copy.get_subtree_nodes(include_self = False, include_terminals = include_terminals)
+		unlucky_node = rd.choice(nodes)
+		subtree_min_depth = 1
+		#subtree_max_depth = rd.randint(subtree_min_depth, len(self.attributes))
+		subtree_max_depth = rd.randint(subtree_min_depth, 3)
+		new_subtree = self.generate_random_tree(max_depth=subtree_max_depth, min_depth = subtree_min_depth, method = "Grow")
+		unlucky_node.parent.replace_child(new_child=new_subtree, old_child=unlucky_node)
+		new_individual = Individual(generation_of_creation = self.generation, genotype = tree_copy, n_objectives = self.n_objectives)
+		return new_individual
+		
 	def generate_random_node(self):
 		node = DT_Node()
 
@@ -520,17 +500,18 @@ class DecisionTree_EA: #oblique, binary trees
 		for i in range(self.crossovers):
 			parent1 = self.tournament_selection()
 			parent2 = self.tournament_selection()
-			newgen_pop.extend(self.one_point_crossover(parent1, parent2))
+			newgen_pop.extend(self._one_point_crossover(parent1, parent2))
 		for i in range(self.mutations):
 			parent = self.tournament_selection()
-			newgen_pop.append(self.mutate(parent))
+			#newgen_pop.append(self.mutate(parent))
+			newgen_pop.append(self._subtree_mutation(parent))
 		
 		if self.n_objectives > 1:
 			#Runs NSGA-II. Elitism is not taken into account
+			pop_size = len(self.population)
 			self.evaluate_population(population = newgen_pop)
 			extended_population = self.population.extend(newgen_pop)
 			self._fast_nondominated_sort(population = extended_population)
-			pop_size = len(self.population)
 			sorted_competitors = self._multiobjective_sort_individuals(population = extended_population)
 			self.population = sorted_competitors[:pop_size]
 		else:
@@ -538,6 +519,8 @@ class DecisionTree_EA: #oblique, binary trees
 			newgen_pop.extend(sorted_competitors[:self.elites])
 			self.population = newgen_pop
 			self.evaluate_population()
+		
+		self.current_generation = self.current_generation + 1
 
 	def tournament_selection(self):
 		"""
@@ -784,19 +767,32 @@ class DecisionTree_EA: #oblique, binary trees
 		
 		for objective_index in range(self.n_objectives):
 			sorted_population = self._sort_individuals(population = population, objective_index = objective_index)
-			sorted_population[0].crowding_distance = np.inf
-			sorted_population[-1].crowding_distance = np.inf
+			best_individual = sorted_population[0]
+			worst_individual = sorted_population[-1]
+			best_value = best_individual.objective_values[objective_index]
+			worst_value = worst_individual.objective_values[objective_index]
+			gap = abs(best_value-worst_value)
+			best_individual.crowding_distance = np.inf
+			worst_individual.crowding_distance = np.inf
 			for individual_index, individual in enumerate(sorted_population[1:-1]):
-				individual.crowding_distance = individual.crowding_distance + abs((sorted_population[individual_index + 2].objective_values[objective_index] - sorted_population[individual_index].objective_values[objective_index])) 
+				individual.crowding_distance = individual.crowding_distance + abs((sorted_population[individual_index + 2].objective_values[objective_index] - sorted_population[individual_index].objective_values[objective_index])/gap)
 	
 	def _dominates(self, p, q):
+		equals = 0
 		for objective_index, objective in self.objectives.items():
-			if objective.to_max:
-				if p.objective_values[objective_index] <= q.objective_values[objective_index]:
-					return False
+			p_val = p.objective_values[objective_index]
+			q_val = q.objective_values[objective_index]
+			if p_val==q_val:
+				equals = equals + 1
 			else:
-				if p.objective_values[objective_index] >= q.objective_values[objective_index]:
-					return False
+				if objective.to_max:
+					if p.objective_values[objective_index] < q.objective_values[objective_index]:
+						return False
+				else:
+					if p.objective_values[objective_index] > q.objective_values[objective_index]:
+						return False
+		if equals == self.n_objectives:
+			return False
 		return True
 		
 	def _multiobjective_sort_individuals(self, population = None):
