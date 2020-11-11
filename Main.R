@@ -18,22 +18,7 @@ library(DT)
 library(visNetwork)
 library(ggplot2)
 library(arsenal)
-
-
-# Cleaning the data before using
-#default_data<-Final_Data[1:1000,]
-# default_data<-GermanCredit
-# default_data<-australian
-# x<-sample(nrow(Final_Data), 10000, replace=FALSE) 
-# m<-Final_Data[x,]
-# summary(comparedf(Final_Data,m))
-
-# Final_Data<-fread("Final_Data.csv",header = T)
-# default_data<-Final_Data
-# write.csv(Final_Data,"Final_Data.csv", row.names=FALSE)
-# # Loading the dataset
-# load("GermanCredit.Rdata")
-# default_data<-GermanCredit
+ # library(profvis) for profiling
 
 # Loading the dataset
 load("GermanCredit.Rdata")
@@ -41,14 +26,12 @@ default_data<-GermanCredit
 use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 source_python("Source_EA.py")
 
-# Final_Data<-Final_Data[,-1]
-# default_data<-Final_Data[1:1000,]
-# x<-default_data
-# australian<-australian[,c(15,1:14)]
-# write.csv(australian,"australian.csv", row.names=FALSE)
-# names(australian)[1] <- "Class"
+# Cleaning the data before using
+#default_data<-Final_Data
+# default_data<-GermanCredit
 # default_data<-australian
-# write.csv(x,"x.csv", row.names=FALSE)
+# write.csv(australian,"australian.csv", row.names=FALSE)
+
 
  tree.size <- function(tree) {
   if (is.null(tree)) {
@@ -59,7 +42,7 @@ source_python("Source_EA.py")
  }
 
 # The main function
-Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
+Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   # For remving warnings
   options(warn=-1)
@@ -69,9 +52,9 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
   default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
   
   # Removing those numerical variables which have correlation between them
-   y=default_data[,1]
+  y=default_data[,1]
   res<-cor(default_data[sapply(default_data, is.numeric)])
-  default_data <- default_data[,!apply(res,2,function(x) any(x > 0.50|| x< -.50))]
+  default_data <- default_data[,!apply(res,2,function(x) any(x > 0.70|| x< -.70))]
   
   fac<-sapply(default_data , is.factor)
   unclass_fac<-sapply(default_data[,fac], unclass)
@@ -110,26 +93,18 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
     default_data<-data.frame(Class=y,default_data)
   }
   
-  if (ncol(default_data)>25 && id==1) { #not needed
-    
-    # Removing those numerical variables which have correlation between them
-    y=default_data[,1]
-    default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
-    res<-cor(default_data[sapply(default_data, is.numeric)])
-    default_data <- default_data[,!apply(res,2,function(x) any(x > 0.40|| x< -.40))]
-    
-    fac<-sapply(default_data , is.factor)
-    unclass_fac<-sapply(default_data[,fac], unclass)
-    name<-colnames(default_data[,!fac])
-    default_data<-cbind(default_data[,name],unclass_fac)
-    
-    default_data<-data.frame(Class=y,default_data)
-  }
-  else {
-    default_data
-  }
   
   default_data[,1]<-as.factor(default_data[,1])
+  
+  # Changing the variable to binary which are stored as numeric
+  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+  nums <- default_data[sapply(default_data,is.numeric)]
+  x<- default_data[ ,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]
+  xx<-ifelse(x[,-1] == "1", 0, 1)
+  default_data<-data.frame(Class=y,nums,xx)
+
+  
+
   
   # Checking the labels and changing them into Good and Bad.
   if(levels(default_data[,1])==c("FALSE","TRUE")){
@@ -144,29 +119,19 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
   }else{
     default_data
   }
-  
-  # Changing the variable to binary which are stored as numeric
-   #default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
-
-  # default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
-
-  
   ###################### Decision tree
 
   # You get the names of the columns
   Cols <- names(default_data)
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
+
+  # Making combination of columns/variable names with minimum 3 variables
+  # selection=100
+  minimum_columns <- 3
+  id <- lapply(1:(selection-1),function(i)sample(seq(n),sample(seq(minimum_columns,n))))
+  id[[length(id)+1]] <- seq(n)
   
-  # You construct all possible combinations
-  id <- unlist(lapply(1:n,function(i)combn(1:n,i,simplify=FALSE)) ,
-                recursive=FALSE)
-  
-  #selection=100
-  id<-sample(id, selection, replace=FALSE) 
-  id<-lapply(id, function(x) list.remove(x,length(x)<2))
-  id<-list.clean(id, function(x) length(x) == 0L, TRUE)
- 
   
   # You paste them to formulas
   Formulas <- sapply(id,function(i)
@@ -186,7 +151,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100,id=0){
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:length(Formulas)) { #CHANGE: this is not random
-    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE)
+    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control(minsplit=2, minbucket=1, cp=0.008))
     Forest[[i]] = RPI
   }
   

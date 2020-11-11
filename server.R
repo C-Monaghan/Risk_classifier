@@ -17,44 +17,80 @@ shinyServer(function(input, output, session){
   
   ## Original Data
   original_data <- reactive({
-    input$button
+   
     inFile <- input$sample_file
-    if (is.null(inFile))
+    if(input$data_choice == FALSE){
       return(data)
-
+    }
+      else if(is.null(inFile)) { 
+        return(NULL)
+      }
     else {
       ori_data <- read.csv(inFile$datapath, header=input$header, sep=input$sep, quote=input$quote)
       ori_data
-      }
+    }
        })
 
-  output$dataset <- renderDataTable({
-    
-    original_data()
-  }%>% datatable(selection=list(target="cell"),
-                 options = list(scrollX = TRUE,
-                                paginate = T,
-                                lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
-                                pageLength = 10,
-                                initComplete = JS(
-                                  "function(settings, json) {",
-                                  "$(this.api().table().header()).css({'color': '#fff'});",
-                                  "}")
-                 )) %>% DT::formatStyle(columns = names(original_data()), color="blue"))
+  output$dataset <- renderDataTable({  
+      if(is.null(original_data())){return()}
+      original_data()
+  },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
+
   
- 
 
   # Reactive expression to create data frame of all input values ----
   sliderValues <- reactive({
 
     data.frame(
       Name = c("Variable selection method",
-               "No. of Decision Trees","File format/type","Option"),
+               "No. of Decision Trees"),
       Value = as.character(c(input$method,
-                             input$trees, input$filetype,input$option)),
+                             input$trees)),
       stringsAsFactors = FALSE)
 
   })
+  # Dynamically adjust Usage guide Main layout width
+  observeEvent(input$tabs, {
+    if(input$tabs == 'steps') {
+      removeClass("main_layout", "col-sm-9")
+      addClass("main_layout", "col-sm-12")
+    }
+    else {
+      removeClass("main_layout", "col-sm-12")
+      addClass("main_layout", "col-sm-9")
+    }
+  })
+  
+  # Data button from Quick Start
+  observeEvent(input$data,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "data")
+               })
+  )
+  
+  # Method specification button from Quick Start
+  observeEvent(input$method_spec,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "specification")
+               })
+  )
+  # Parameter button from View dataset tab
+  observeEvent(input$parameter_button,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "specification")
+               })
+  )
+  
+  # Return Parameter button from View dataset tab
+  observeEvent(input$return_parameter_button,
+               isolate({
+                 updateTabsetPanel(session, "tabs",
+                                   selected = "specification")
+               })
+  )
 
  method<-reactive({
    input$method
@@ -65,7 +101,7 @@ shinyServer(function(input, output, session){
  })
 
 
-global <- reactiveValues(response = FALSE)
+global <- reactiveValues(response=FALSE)
 
 # Show the values in an HTML table ----
 output$values <- renderTable({
@@ -81,69 +117,62 @@ caption.placement = getOption("xtable.caption.placement", "top"),
 caption.width = getOption("xtable.caption.width", NULL))
 
 
+
+# Submit Calculate Parameter Button
 observeEvent(input$button, {
+  # print(input$button)
   # Show a modal when the button is pressed
-  shinyalert("calculating.....please wait", type = "info",showConfirmButton = TRUE,
+  shinyalert("calculating.....please wait", type = "success",showConfirmButton = TRUE,
              showCancelButton = TRUE,
              confirmButtonText = "OK",
-             cancelButtonText = "Cancel",callbackR = function(x) {
+             cancelButtonText = "Cancel",
+             animation = TRUE,
+             callbackR = function(x) {
                global$response <- x
-             }
-  )
-  enable("button1")
+             })
+})
+Main<-reactive({
+  
+  Classifier(original_data(),  method(),trees())
+  
+})  
+# Submit Calculate Parameter Button
+observeEvent(global$response, {
+              if(isolate(global$response)==T){
+               
+                output$Reduced_data <- renderDataTable({ 
+                  if(is.null(original_data())){return()}
+                  
+                  Main()$Reduced_data
+                },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
+                
+                output$colred <- renderTable({
+                  
+                  
+                  colnames(Main()$Reduced_data)
+                  
+                }, caption=paste("Reduced variables in the dataset"),
+                caption.placement = getOption("xtable.caption.placement", "top"),
+                caption.width = getOption("xtable.caption.width", NULL))
+                
+                withProgress({Main()$Reduced_data},message = 'Function Running', value = 0.8  )
+                
+                # Switches to Reduced Dataset after variable selection tab if User is in Method specification and when model has finished running.
+                if(input$tabs == 'specification') {
+                  updateTabsetPanel(session, "tabs",
+                                    selected = "download")
+                }
+                global$response= FALSE
+              }
+  
+  
+            else { return(NULL) 
+              }
+              
+            
+
 })
 
-Main<-reactive({
-  input$button
-  isolate(if(global$response==T){
-Classifier(original_data(),  method(),trees())
-  } else  return(NULL)
-  )
-    })
-
-
-
-#classifier_outputs <- Main()
-
-#f_evolve <- function(){
-# use_python("C:/Users/fredx/Anaconda3",required=T)
-# for (Ctree in C$Trees) {
-# rules <- tidyRules(CTree)
-# }
-#}
-
-# Show the values in an HTML table ----
-output$Reduced_data <- renderDataTable({
-  input$button
-  isolate(if(global$response==T){
-    
-    withProgress({Main()$Reduced_data},
-                 message = 'Function Running', value = 0.8  )
-      
-  
-  } else  return(NULL)
-  )
-}%>% datatable(selection=list(target="cell"),
-               options = list(scrollX = TRUE,
-                              paginate = T,
-                              lengthMenu = c(2,5, 10, 20, 50,100,500,1000),
-                              pageLength = 10,
-                              initComplete = JS(
-                                "function(settings, json) {",
-                                "$(this.api().table().header()).css({'color': '#fff'});",
-                                "}")
-               )) %>% DT::formatStyle(columns = names(Main()$Reduced_data), color="blue"))
-
-
-output$colred <- renderTable({
-  input$button
-  isolate(if(global$response==T){
- colnames(Main()$Reduced_data)
-  } else  return(NULL)
-  )
-}, caption=paste("Reduced variables in the dataset"),
-caption.placement = getOption("xtable.caption.placement", "top"),
-caption.width = getOption("xtable.caption.width", NULL))
 
 option<-reactive({
   input$button1
@@ -160,7 +189,8 @@ output$plot<-renderPlot({
   if(option()=="ind_max_acc"){
   isolate(if(global$response==T){
 
-    withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE)},
+    withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
+                             branch.lty=3, shadow.col="gray", nn=TRUE)},
                  message = 'Making plot', value = 0.5 )
   }
   else  return(NULL)
@@ -168,7 +198,8 @@ output$plot<-renderPlot({
   }else if (option()=="ind_min_gini") {
     isolate(if(global$response==T){
       
-      withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE)},
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
                    message = 'Making plot', value = 0.5 )
         
       
@@ -179,7 +210,8 @@ output$plot<-renderPlot({
     isolate(if(global$response==T){
   
       
-      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE)},
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
                    message = 'Making plot', value = 0.5  )
     }
     else  return(NULL)
@@ -258,6 +290,7 @@ output$down1<-downloadHandler(
     paste("DecisionTree",input$filetype,sep=".")
   },
   content = function(file){
+    if(option()=="ind_max_acc"){
     #open the device <-png(),pdf()
     # create/write the plot
     #close the device
@@ -265,8 +298,28 @@ output$down1<-downloadHandler(
       png(file)
     else
       pdf(file)
-    rpart.plot(Main()$Trees[[viewtree()]],roundint=FALSE)
+    rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
+               branch.lty=3, shadow.col="gray", nn=TRUE)
     dev.off()
+    }
+    else  if(option()=="ind_min_gini"){
+      if(input$filetype=="png")
+        png(file)
+      else
+        pdf(file)
+      rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
+                 branch.lty=3, shadow.col="gray", nn=TRUE)
+      dev.off()
+    }
+    else {
+      if(input$filetype=="png")
+        pdf(file)
+      else
+        png(file)
+      rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
+                 branch.lty=3, shadow.col="gray", nn=TRUE)
+      dev.off()
+    }
   }
 )
 
@@ -291,7 +344,18 @@ PDT <- DecisionTree_EA(tournament_size = 5,
                        elitism_rate = 0.0,
                        hall_of_fame_size = 3)
 
+
 #Initial setup
+
+
+
+
+
+#use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+
+source_python("Source_EA.py")
+
 disable("evolve")
 disable("restart_evolution")
 disable("accuracy_checkbox")
@@ -407,6 +471,7 @@ initiate_ea <- function(forest,dataset) {
   bad_trees_count=0
   for (Ctree in forest) {
     if (nrow(Ctree$frame) < 5){
+
       bad_trees_count = bad_trees_count+1
     }
     else{
@@ -474,7 +539,9 @@ observeEvent(input$evolve, {
                    PDT$'evolve'()
                    current_best_value <- PDT$'get_best_value_for_objective'()
                    current_mean_value <- PDT$'get_population_mean_for_objective'()
+
                    current_best_tree_nodes <- PDT$'get_best_individual'(objective_index=0)$'objective_values'[[nodes_objective_index+1]]
+
                    current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
                    
                    update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
@@ -500,6 +567,8 @@ observeEvent(input$seed, {
                                                                                  "$(this.api().table().header()).css({'color': '#fff'});",
                                                                                  "}")
   )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
+
+ 
 })
 
 
@@ -517,7 +586,7 @@ observeEvent(input$restart_evolution, { #Needs a lot of work
 observeEvent(input$update_tree, {
   output$network <- renderVisNetwork({
     PDT$'evaluate_population'()
-    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
+    best_tree <- PDT$'get_best_individual'()$'genotype'
     best_tree_nodes <- best_tree$'get_subtree_nodes'()
     connections <- best_tree$'get_connections'()
     connections
@@ -530,7 +599,7 @@ observeEvent(input$update_tree, {
     for (node in best_tree_nodes){
       label = (toString(node))
       color="lightblue"
-      font_color = "white"
+      font_color = "black"
       if (node$'is_terminal'() == TRUE){
         shape="square"
       }
