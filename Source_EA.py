@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Sep 17 23:15:50 2020
-
 @author: Fred Valdez Ameneyro
-
 My Evolutionary Algorithm for Decision Trees
 Features:
 Evolution seeded with the output of existing methods
@@ -782,17 +780,12 @@ class DecisionTree_EA: #oblique, binary trees
 		for objective_index, objective in self.objectives.items():
 			p_val = p.objective_values[objective_index]
 			q_val = q.objective_values[objective_index]
-			if p_val==q_val:
-				equals = equals + 1
+			if objective.to_max:
+				if p_val < q_val:
+					return False
 			else:
-				if objective.to_max:
-					if p.objective_values[objective_index] < q.objective_values[objective_index]:
-						return False
-				else:
-					if p.objective_values[objective_index] > q.objective_values[objective_index]:
-						return False
-		if equals == self.n_objectives:
-			return False
+				if p_val > q_val:
+					return False
 		return True
 		
 	def _multiobjective_sort_individuals(self, population = None):
