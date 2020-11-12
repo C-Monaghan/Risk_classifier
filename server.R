@@ -11,6 +11,7 @@ load("GermanCredit.Rdata")
 data<-GermanCredit
 
 
+
 shinyServer(function(input, output, session){
   
   options(shiny.maxRequestSize=100*1024^2)
@@ -188,7 +189,7 @@ shinyServer(function(input, output, session){
   })
   
   option<-reactive({
-  input$button1
+    input$button1
     isolate(if(global_plot$value==T){
       input$option
     }
@@ -196,35 +197,35 @@ shinyServer(function(input, output, session){
     )
   })
   
-
-      output$plot<-renderPlot({
-        
-        
-        if(option()=="ind_max_acc"){
-          
-            withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
-                                     branch.lty=3, shadow.col="gray", nn=TRUE)},
-                         message = 'Making plot', value = 0.5 )
-          
-        }else if (option()=="ind_min_gini") {
-         
-            
-            withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
-                                     branch.lty=3, shadow.col="gray", nn=TRUE)},
-                         message = 'Making plot', value = 0.5 )
-            
-        }else {
-          
-            
-            
-            withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
-                                     branch.lty=3, shadow.col="gray", nn=TRUE)},
-                         message = 'Making plot', value = 0.5  )
-          
-        }
-      }) 
-     
-   
+  
+  output$plot<-renderPlot({
+    
+    
+    if(option()=="ind_max_acc"){
+      
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
+                   message = 'Making plot', value = 0.5 )
+      
+    }else if (option()=="ind_min_gini") {
+      
+      
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_min_gini]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
+                   message = 'Making plot', value = 0.5 )
+      
+    }else {
+      
+      
+      
+      withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
+                               branch.lty=3, shadow.col="gray", nn=TRUE)},
+                   message = 'Making plot', value = 0.5  )
+      
+    }
+  }) 
+  
+  
   
   
   Values <- reactive({
@@ -326,11 +327,15 @@ shinyServer(function(input, output, session){
   ##########  EVOLUTIONARY ALGORITHM ###################################################
   ######################################################################################
   ######################################################################################
-  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-  source_python("Source_EA.py")
+  
+  
+  
+  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  use_python("C:/Users/fredx/Anaconda3",required=T)
+  reticulate::source_python("Source_EA.py")
   
   #Parameters
-  available_objectives <- c("accuracy", "nodes", "sensitivity", "sensibility") #ordering must be kept
+  available_objectives <- c("accuracy", "nodes", "sensitivity", "specificity") #ordering must be kept
   to_max <- c(TRUE, FALSE, TRUE, TRUE)
   initially_included <- c(FALSE, FALSE, FALSE, FALSE)
   PDT <- DecisionTree_EA(tournament_size = 5,
@@ -344,7 +349,7 @@ shinyServer(function(input, output, session){
   #use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
   
   
-
+  
   
   disable("evolve")
   disable("restart_evolution")
@@ -378,20 +383,8 @@ shinyServer(function(input, output, session){
                                           "accuracy"=double(),
                                           "nodes"=double(),
                                           "sensitivity"=double(),
-                                          "sensibility"=double()) #there should be a way to add the column names from the available_objectives variable
+                                          "specificity"=double()) #there should be a way to add the column names from the available_objectives variable
   #colnames(reactive_variables$pareto) <- c("Gen", "Individual_index", "Generation_of_creaton", "Rank", "Nodes", available_objectives)
-  
-  progress_values <- reactiveValues()
-  progress_values$best_values <- c()
-  progress_values$mean_values <- c()
-  progress_values$best_tree_nodes <- c()
-  progress_values$mean_nodes <- c()
-  progress_values$df <- data.frame("")
-  
-  visibility_flags <- reactiveValues()
-  visibility_flags$test <- TRUE
-  
-  
   
   ########################
   # Functions ############
@@ -491,26 +484,13 @@ shinyServer(function(input, output, session){
     return (crucial_values)
   }
   
-  
-  update_progress <- function(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes) {
-    #insert the values from the last evolution generation to their corresponding variables
-    progress_values$best_values <<- c(progress_values$best_values, current_best_value)
-    progress_values$mean_values <<- c(progress_values$mean_values, current_mean_value)
-    progress_values$best_tree_nodes <<- c(progress_values$best_tree_nodes, current_best_tree_nodes)
-    progress_values$mean_nodes <<- c(progress_values$mean_nodes, current_mean_nodes)
-  }
-  
-  
-  
-  
-  
   seed_crucial_values <- function(){
     crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
     enable("evolve")
     disable("accuracy_checkbox")
     disable("nodes_checkbox")
     disable("sensitivity_checkbox")
-    disable("sensibility_checkbox")
+    disable("specificity_checkbox")
     seeded_evolution <<- TRUE
     return (crucial_values)
   }
@@ -527,16 +507,7 @@ shinyServer(function(input, output, session){
                  {
                    for (g in 1:input$generations){
                      PDT$'evolve'()
-                     current_best_value <- PDT$'get_best_value_for_objective'()
-                     current_mean_value <- PDT$'get_population_mean_for_objective'()
-                     
-                     current_best_tree_nodes <- PDT$'get_best_individual'(objective_index=0)$'objective_values'[[nodes_objective_index+1]]
-                     
-                     current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
-                     
-                     update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
                      update_reactive_variables()
-                     
                      incProgress(1/input$generations)
                    }
                  })
@@ -568,7 +539,7 @@ shinyServer(function(input, output, session){
     enable("accuracy_checkbox")
     enable("nodes_checkbox")
     enable("sensitivity_checkbox")
-    enable("sensibility_checkbox")
+    enable("specificity_checkbox")
     reactive_variables$all_generations <- c()
   })
   
@@ -576,7 +547,7 @@ shinyServer(function(input, output, session){
   observeEvent(input$update_tree, {
     output$network <- renderVisNetwork({
       PDT$'evaluate_population'()
-      best_tree <- PDT$'get_best_individual'()$'genotype'
+      best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
       best_tree_nodes <- best_tree$'get_subtree_nodes'()
       connections <- best_tree$'get_connections'()
       connections
@@ -623,17 +594,6 @@ shinyServer(function(input, output, session){
   # Outputs ##############
   
   output$evolution_progress <- renderPlot({
-    # df<- cbind(data.frame(progress_values$best_values),
-    #            data.frame(progress_values$mean_values),
-    #            data.frame(progress_values$best_tree_nodes),
-    #            data.frame(progress_values$mean_nodes))
-    # Generation <- as.numeric(row.names(df))
-    # ggplot(data = df, aes(x=Generation))+
-    #   geom_line(aes(y=progress_values$best_values), color = "darkblue", size=1) +
-    #   geom_point(aes(y=progress_values$best_values), color = "darkblue", size=3) +
-    #   geom_line(aes(y=progress_values$mean_values), color = "blue", linetype="twodash") +
-    #   xlab("Generation") +
-    #   ylab("Accuracy")
     
     objective_name = "accuracy"
     obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
@@ -647,17 +607,6 @@ shinyServer(function(input, output, session){
   
   
   output$evolution_progress_nodes <- renderPlot({
-    # df<- cbind(data.frame(progress_values$best_values),
-    #           data.frame(progress_values$mean_values),
-    #           data.frame(progress_values$best_tree_nodes),
-    #           data.frame(progress_values$mean_nodes))
-    # Generation <- as.numeric(row.names(df))
-    # ggplot(data = df, aes(x=Generation))+
-    #   geom_line(aes(y=progress_values$best_tree_nodes), color = "darkblue", size = 1) +
-    #   geom_point(aes(y=progress_values$best_tree_nodes), color = "darkblue", size=3) +
-    #   geom_line(aes(y=progress_values$mean_nodes), color = "blue", linetype="twodash") +
-    #   xlab("Generation") +
-    #   ylab("Nodes")
     
     objective_name = "nodes"
     obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
