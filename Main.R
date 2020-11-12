@@ -21,10 +21,11 @@ library(arsenal)
 library(hrbrthemes)
  # library(profvis) for profiling
 
+
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
-use_python("C:/Users/fredx/Anaconda3",required=T)
+#use_python("C:/Users/fredx/Anaconda3",required=T)
 #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
 #source_python("Source_EA.py")
 
@@ -35,13 +36,13 @@ use_python("C:/Users/fredx/Anaconda3",required=T)
 # write.csv(australian,"australian.csv", row.names=FALSE)
 
 
- tree.size <- function(tree) {
+tree.size <- function(tree) {
   if (is.null(tree)) {
-     return(0)
-   } else {
-     return(1 + tree.size(tree$left) + tree.size(tree$right))
-   }
- }
+    return(0)
+  } else {
+    return(1 + tree.size(tree$left) + tree.size(tree$right))
+  }
+}
 
 # The main function
 Classifier<-function(default_data,choose_regression = TRUE,selection=100){
@@ -63,7 +64,7 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   default_data<-cbind(default_data[,!fac],unclass_fac)
   
   default_data<-data.frame(Class=y,default_data)
-
+  
   ###################### Applying regressions
   
   # Making model.matrix by expanding factors to a set of dummy variables
@@ -104,9 +105,9 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   x<- default_data[ ,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]
   xx<-ifelse(x[,-1] == "1", 0, 1)
   default_data<-data.frame(Class=y,nums,xx)
-
   
-
+  
+  
   
   # Checking the labels and changing them into Good and Bad.
   if(levels(default_data[,1])==c("FALSE","TRUE")){
@@ -122,12 +123,12 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     default_data
   }
   ###################### Decision tree
-
+  
   # You get the names of the columns
   Cols <- names(default_data)
   Cols <- Cols[! Cols %in% "Class"]
   n <- length(Cols)
-
+  
   # Making combination of columns/variable names with minimum 3 variables
   # selection=100
   minimum_columns <- 3
@@ -157,17 +158,17 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
     Forest[[i]] = RPI
   }
   
-   z  = list()
-   zz = list()
-   for (i in 1:length(Forest)){
-       if(identical(Forest[[i]]$splits,NULL)){
-     z[[i]]<-Forest[[i]]
-   } else {
-     zz[[i]]<-Forest[[i]]
-   }
-   }
-   zz<- zz[!sapply(zz, is.null)]
-   Forest<-zz
+  z  = list()
+  zz = list()
+  for (i in 1:length(Forest)){
+    if(identical(Forest[[i]]$splits,NULL)){
+      z[[i]]<-Forest[[i]]
+    } else {
+      zz[[i]]<-Forest[[i]]
+    }
+  }
+  zz<- zz[!sapply(zz, is.null)]
+  Forest<-zz
   
   #~~~~~~~~  TESTING PERFORMANCE
   
@@ -242,10 +243,10 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
   max_AUROC<-max(forest_AUROC)
   ind_max_AUROC<-which.max(forest_AUROC)
-    
+  
   return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, max_Acc= max_Acc,ind_max_acc=ind_max_acc, Model_Performance=forest_perf, AUROC=forest_AUROC, max_AUROC=max_AUROC,ind_max_AUROC=ind_max_AUROC, Gini_Index= forest_Gini,min_gini=min_gini,ind_min_gini=ind_min_gini)) 
- 
-  }
+  
+}
 
 # initiate_population <- function(Forest){
 #   bad_trees_count=0
@@ -277,4 +278,3 @@ Classifier<-function(default_data,choose_regression = TRUE,selection=100){
 # a$Max_Acc
 # rpart.plot(a$Trees[[a$ind_max_Acc]])
 #rpart.plot(Forest[[which.min(forest_Gini)]])
-
