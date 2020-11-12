@@ -200,7 +200,7 @@ shinyUI(ui = tagList(
                                            actionButton("save_tree_python",
                                        "Save current best tree"),
                           actionButton("loade_tree_python",
-                                       "Load tree"))
+                                       "Load tree"),downloadButton(outputId="net",label ="Download the tree in .html"))
                          
 
                           ),
@@ -220,7 +220,7 @@ shinyUI(ui = tagList(
                                              actionButton("update_tree",
                                                           "View best tree"),
                                              visNetworkOutput("network", height = "800px", width = "800px"),
-                                             DTOutput("tree_partitions"),downloadButton(outputId="net",label ="Download the tree in .html"))
+                                             DTOutput("tree_partitions"))
                                     )
                         ))
 
