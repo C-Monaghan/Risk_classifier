@@ -255,14 +255,96 @@ shinyServer(function(input, output, session){
                                Main()$AUROC[[Main()$ind_max_AUROC]])),
         stringsAsFactors = FALSE)
     }
-    
-  })
+})
   
   
   output$res<-renderTable({
     input$button1
     isolate(if(global_plot$value==T){
       Values()
+  }
+)
+
+
+
+
+######################################################################################
+######################################################################################
+##########  EVOLUTIONARY ALGORITHM ###################################################
+######################################################################################
+######################################################################################
+
+source_python("Source_EA.py")
+
+#Parameters
+available_objectives <- c("accuracy", "nodes", "sensitivity", "sensibility") #ordering must be kept
+to_max <- c(TRUE, FALSE, TRUE, TRUE)
+initially_included <- c(FALSE, FALSE, FALSE, FALSE)
+PDT <- DecisionTree_EA(tournament_size = 5,
+                       crossover_rate = 0.4,
+                       mutation_rate = 0.6,
+                       elitism_rate = 0.0,
+                       hall_of_fame_size = 3)
+
+
+#Initial setup
+
+
+
+
+
+#use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
+#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+
+#source_python("Source_EA.py")
+
+disable("evolve")
+disable("restart_evolution")
+disable("accuracy_checkbox")
+seeded_evolution <- FALSE
+nodes_objective_index <- NULL
+accuracy_objective_index <- NULL
+max_objectives <- length(available_objectives)
+
+#Reactives
+reactive_variables <- reactiveValues()
+reactive_variables$objectives <- data.frame("Index"=0:(max_objectives-1),
+                                            "Objective_name"=available_objectives,
+                                            "To_max" = to_max,
+                                            "Included" = initially_included,
+                                            "Best_values" = vector(mode="double", length=max_objectives),
+                                            "Mean_values" = vector(mode="double", length=max_objectives),
+                                            "Std_devs" = vector(mode="double", length=max_objectives))
+reactive_variables$progress <- data.frame("Gen"=integer(),
+                                           "Objective_name"=character(),
+                                           "Type"=character(),
+                                           "Value"=double(),
+                                           "Low"=double(),
+                                           "High"=double(),
+                                           stringsAsFactors = FALSE)
+reactive_variables$pareto <- data.frame("Gen"=integer(),
+                                        "Individual_index"=integer(),
+                                        "Generation_of_creaton"=integer(),
+                                        "Rank"=integer(),
+                                        "Nodes"=integer(),
+                                        "accuracy"=double(),
+                                        "nodes"=double(),
+                                        "sensitivity"=double(),
+                                        "sensibility"=double()) #there should be a way to add the column names from the available_objectives variable
+
+########################
+# Functions ############
+
+update_reactive_variables <- function(){
+  current_generation <- PDT$'current_generation'
+  
+  #Update the individuals
+  individual_counter <- 0
+  for (individual in PDT$'population'){
+    #individual=PDT$'population'[[1]]
+    objective_values <- c()
+    for (objective_value in individual$'objective_values'){
+      objective_values <- c(objective_values, objective_value)
     }
     else  return(NULL)
     )
@@ -476,127 +558,104 @@ shinyServer(function(input, output, session){
       random_tree = PDT$'generate_random_tree'()
       PDT$'insert_tree_to_population'(random_tree)
     }
-    update_inclusion_of_objectives()
-    
-    nodes_objective_index <<- 1
-    accuracy_objective_index <<- 0
-    names <- PDT$'get_attribute_names'()
-    values <- PDT$'get_crucial_values'()
-    len <- sapply(values,length)
-    m_l <- max(len)
-    len <- m_l - len
-    crucial_values <- data.frame(mapply( function(x,y) c( x , rep( NA , y ) ) , values , len ))
-    colnames(crucial_values) <- names
-    
-    return (crucial_values)
-  }
+
+  update_inclusion_of_objectives()
   
+  nodes_objective_index <<- 1
+  accuracy_objective_index <<- 0
+  names <- PDT$'get_attribute_names'()
+  values <- PDT$'get_crucial_values'()
+  len <- sapply(values,length)
+  m_l <- max(len)
+  len <- m_l - len
+  crucial_values <- data.frame(mapply( function(x,y) c( x , rep( NA , y ) ) , values , len ))
+  colnames(crucial_values) <- names
   
-  update_progress <- function(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes) {
-    #insert the values from the last evolution generation to their corresponding variables
-    progress_values$best_values <<- c(progress_values$best_values, current_best_value)
-    progress_values$mean_values <<- c(progress_values$mean_values, current_mean_value)
-    progress_values$best_tree_nodes <<- c(progress_values$best_tree_nodes, current_best_tree_nodes)
-    progress_values$mean_nodes <<- c(progress_values$mean_nodes, current_mean_nodes)
-  }
-  
-  
-  
-  
-  
-  seed_crucial_values <- function(){
-    crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
-    enable("evolve")
-    disable("accuracy_checkbox")
-    disable("nodes_checkbox")
-    disable("sensitivity_checkbox")
-    disable("sensibility_checkbox")
-    seeded_evolution <<- TRUE
-    return (crucial_values)
-  }
-  
-  
-  
-  ######################
-  # Buttons ############
-  
-  observeEvent(input$evolve, {
-    print(paste0("Running ",input$generations," generations"))
-    withProgress(message = "Evolving",
-                 value = 0,
-                 {
-                   for (g in 1:input$generations){
-                     PDT$'evolve'()
-                     current_best_value <- PDT$'get_best_value_for_objective'()
-                     current_mean_value <- PDT$'get_population_mean_for_objective'()
-                     
-                     current_best_tree_nodes <- PDT$'get_best_individual'(objective_index=0)$'objective_values'[[nodes_objective_index+1]]
-                     
-                     current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
-                     
-                     update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
-                     update_reactive_variables()
-                     
-                     incProgress(1/input$generations)
-                   }
-                 })
-    enable("restart_evolution")
-  })
-  
-  
-  observeEvent(input$seed, {
-    crucial_values <- seed_crucial_values()
-    output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
-                                                                  options = list(scrollX = TRUE,
-                                                                                 #scrolly = TRUE,
-                                                                                 paginate = T,
-                                                                                 lengthMenu = c(5, 10, 15),
-                                                                                 pageLength = 15,
-                                                                                 initComplete = JS(
-                                                                                   "function(settings, json) {",
-                                                                                   "$(this.api().table().header()).css({'color': '#000'});",
-                                                                                   "}")
-                                                                  )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
-    
-    
-  })
-  
-  
-  observeEvent(input$restart_evolution, { #Needs a lot of work
-    PDT$'restart_evolution'()
-    crucial_values <- seed_crucial_values()
-    enable("accuracy_checkbox")
-    enable("nodes_checkbox")
-    enable("sensitivity_checkbox")
-    enable("sensibility_checkbox")
-    reactive_variables$all_generations <- c()
-  })
-  
-  
-  observeEvent(input$update_tree, {
-    output$network <- renderVisNetwork({
-      PDT$'evaluate_population'()
-      best_tree <- PDT$'get_best_individual'()$'genotype'
-      best_tree_nodes <- best_tree$'get_subtree_nodes'()
-      connections <- best_tree$'get_connections'()
-      connections
-      c_from <- connections[[1]]
-      c_to <- connections[[2]]
-      c_color <- connections[[3]]
-      new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
-      new_df <- data.frame(id=c(),label=c(), shape=c())
-      i=0
-      for (node in best_tree_nodes){
-        label = (toString(node))
-        color="lightblue"
-        font_color = "black"
-        if (node$'is_terminal'() == TRUE){
-          shape="square"
-        }
-        else{
-          if (node$'is_root'()){
-            shape="triangle"
-            color="blue"
+  return (crucial_values)
+}
+
+seed_crucial_values <- function(){
+  crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
+  enable("evolve")
+  disable("accuracy_checkbox")
+  disable("nodes_checkbox")
+  disable("sensitivity_checkbox")
+  disable("specificity_checkbox")
+  seeded_evolution <<- TRUE
+  return (crucial_values)
+}
+
+######################
+# Buttons ############
+
+observeEvent(input$evolve, {
+  print(paste0("Running ",input$generations," generations"))
+  withProgress(message = "Evolving",
+               value = 0,
+               {
+                 for (g in 1:input$generations){
+                   PDT$'evolve'()
+                   update_reactive_variables()
+                   incProgress(1/input$generations)
+                 }
+               })
+  enable("restart_evolution")
+})
+
+
+observeEvent(input$seed, {
+  crucial_values <- seed_crucial_values()
+  output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
+                                                                options = list(scrollX = TRUE,
+                                                                               #scrolly = TRUE,
+                                                                               paginate = T,
+                                                                               lengthMenu = c(5, 10, 15),
+                                                                               pageLength = 15,
+                                                                               initComplete = JS(
+                                                                                 "function(settings, json) {",
+                                                                                 "$(this.api().table().header()).css({'color': '#000'});",
+                                                                                 "}")
+  )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
+
+ 
+})
+
+
+observeEvent(input$restart_evolution, { #Needs a lot of work
+  PDT$'restart_evolution'()
+  crucial_values <- seed_crucial_values()
+  enable("accuracy_checkbox")
+  enable("nodes_checkbox")
+  enable("sensitivity_checkbox")
+  enable("specificity_checkbox")
+  reactive_variables$all_generations <- c()
+})
+
+
+observeEvent(input$update_tree, {
+  output$network <- renderVisNetwork({
+    PDT$'evaluate_population'()
+    best_tree <- PDT$'get_best_individual'(objective_index = 0)$'genotype'
+    best_tree_nodes <- best_tree$'get_subtree_nodes'()
+    connections <- best_tree$'get_connections'()
+    connections
+    c_from <- connections[[1]]
+    c_to <- connections[[2]]
+    c_color <- connections[[3]]
+    new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
+    new_df <- data.frame(id=c(),label=c(), shape=c())
+    i=0
+    for (node in best_tree_nodes){
+      label = (toString(node))
+      color="lightblue"
+      font_color = "black"
+      if (node$'is_terminal'() == TRUE){
+        shape="square"
+      }
+      else{
+        if (node$'is_root'()){
+          shape="triangle"
+          color="blue"
           }
           else{
             shape="triangle"
@@ -616,24 +675,15 @@ shinyServer(function(input, output, session){
         visHierarchicalLayout()
     })
   })
-  
-  
-  
-  ########################
-  # Outputs ##############
-  
-  output$evolution_progress <- renderPlot({
-    # df<- cbind(data.frame(progress_values$best_values),
-    #            data.frame(progress_values$mean_values),
-    #            data.frame(progress_values$best_tree_nodes),
-    #            data.frame(progress_values$mean_nodes))
-    # Generation <- as.numeric(row.names(df))
-    # ggplot(data = df, aes(x=Generation))+
-    #   geom_line(aes(y=progress_values$best_values), color = "darkblue", size=1) +
-    #   geom_point(aes(y=progress_values$best_values), color = "darkblue", size=3) +
-    #   geom_line(aes(y=progress_values$mean_values), color = "blue", linetype="twodash") +
-    #   xlab("Generation") +
-    #   ylab("Accuracy")
+
+})
+
+
+
+########################
+# Outputs ##############
+
+output$evolution_progress <- renderPlot({
     
     objective_name = "accuracy"
     obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
@@ -643,39 +693,30 @@ shinyServer(function(input, output, session){
       geom_ribbon(aes(ymin=Low, ymax=High), linetype=2, alpha=0.1) +
       xlab("Generation") +
       ylab("Accuracy")
-  })
-  
-  
-  output$evolution_progress_nodes <- renderPlot({
-    # df<- cbind(data.frame(progress_values$best_values),
-    #           data.frame(progress_values$mean_values),
-    #           data.frame(progress_values$best_tree_nodes),
-    #           data.frame(progress_values$mean_nodes))
-    # Generation <- as.numeric(row.names(df))
-    # ggplot(data = df, aes(x=Generation))+
-    #   geom_line(aes(y=progress_values$best_tree_nodes), color = "darkblue", size = 1) +
-    #   geom_point(aes(y=progress_values$best_tree_nodes), color = "darkblue", size=3) +
-    #   geom_line(aes(y=progress_values$mean_nodes), color = "blue", linetype="twodash") +
-    #   xlab("Generation") +
-    #   ylab("Nodes")
-    
-    objective_name = "nodes"
-    obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
-    ggplot(data = obj_subset, aes(x=Gen, y=Value, color=Type))+
-      geom_point() + 
-      geom_line() +
-      geom_ribbon(aes(ymin=Low, ymax=High), linetype=2, alpha=0.1) +
-      xlab("Generation") +
-      ylab("Nodes")
-  })
-  
-  output$pareto_front <- renderPlot({
-    current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
-    current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
-    ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + 
-      geom_point(size=6) +
-      theme_ipsum()
-  })
-  
-  
+
 })
+
+
+output$evolution_progress_nodes <- renderPlot({
+  
+  objective_name = "nodes"
+  obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
+  ggplot(data = obj_subset, aes(x=Gen, y=Value, color=Type))+
+    geom_point() + 
+    geom_line() +
+    geom_ribbon(aes(ymin=Low, ymax=High), linetype=2, alpha=0.1) +
+    xlab("Generation") +
+    ylab("Nodes")
+})
+
+output$pareto_front <- renderPlot({
+  current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
+  current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
+  ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + 
+    geom_point(size=6) +
+    theme_ipsum()
+})
+
+
+})
+
