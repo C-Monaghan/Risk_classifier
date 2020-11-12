@@ -50,6 +50,7 @@ shinyServer(function(input, output, session){
       stringsAsFactors = FALSE)
     
   })
+  
   # Dynamically adjust Usage guide Main layout width
   observeEvent(input$tabs, {
     if(input$tabs == 'steps') {
@@ -77,6 +78,7 @@ shinyServer(function(input, output, session){
                                    selected = "specification")
                })
   )
+  
   # Parameter button from View dataset tab
   observeEvent(input$parameter_button,
                isolate({
@@ -330,8 +332,8 @@ shinyServer(function(input, output, session){
   
   
   
-  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-  use_python("C:/Users/fredx/Anaconda3",required=T)
+  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  #use_python("C:/Users/fredx/Anaconda3",required=T)
   reticulate::source_python("Source_EA.py")
   
   #Parameters
@@ -543,52 +545,67 @@ shinyServer(function(input, output, session){
     reactive_variables$all_generations <- c()
   })
   
+ mynetwork<-reactive({
+   PDT$'evaluate_population'()
+   best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
+   best_tree_nodes <- best_tree$'get_subtree_nodes'()
+   connections <- best_tree$'get_connections'()
+   connections
+   c_from <- connections[[1]]
+   c_to <- connections[[2]]
+   c_color <- connections[[3]]
+   new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
+   new_df <- data.frame(id=c(),label=c(), shape=c())
+   i=0
+   for (node in best_tree_nodes){
+     label = (toString(node))
+     color="lightblue"
+     font_color = "black"
+     if (node$'is_terminal'() == TRUE){
+       shape="square"
+     }
+     else{
+       if (node$'is_root'()){
+         shape="triangle"
+         color="blue"
+       }
+       else{
+         shape="triangle"
+       }
+     }
+     
+     new_df <- rbind(new_df, data.frame(id=i,
+                                        label=label, 
+                                        shape=shape,
+                                        color=color,
+                                        font.color = font_color))
+     i=i+1
+   }
+   #new_df
+   net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
+     visEdges(arrows = "from") %>% 
+     visHierarchicalLayout() 
+ })
+      
   
   observeEvent(input$update_tree, {
     output$network <- renderVisNetwork({
-      PDT$'evaluate_population'()
-      best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
-      best_tree_nodes <- best_tree$'get_subtree_nodes'()
-      connections <- best_tree$'get_connections'()
-      connections
-      c_from <- connections[[1]]
-      c_to <- connections[[2]]
-      c_color <- connections[[3]]
-      new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
-      new_df <- data.frame(id=c(),label=c(), shape=c())
-      i=0
-      for (node in best_tree_nodes){
-        label = (toString(node))
-        color="lightblue"
-        font_color = "black"
-        if (node$'is_terminal'() == TRUE){
-          shape="square"
-        }
-        else{
-          if (node$'is_root'()){
-            shape="triangle"
-            color="blue"
-          }
-          else{
-            shape="triangle"
-          }
-        }
-        
-        new_df <- rbind(new_df, data.frame(id=i,
-                                           label=label, 
-                                           shape=shape,
-                                           color=color,
-                                           font.color = font_color))
-        i=i+1
-      }
-      #new_df
-      visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
-        visEdges(arrows = "from") %>% 
-        visHierarchicalLayout()
+      
+mynetwork()
     })
   })
   
-  
+  #~~~~ Download the network decision tree plot
+  output$net<-downloadHandler(
+    #Specify filename
+    filename = function() {
+      paste('network-', Sys.Date(), '.html', sep='')
+    },
+    content = function(con) {
+      mynetwork() %>% visSave(con)
+    }
+  )
+     
   
   ########################
   # Outputs ##############
