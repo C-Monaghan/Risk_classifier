@@ -395,19 +395,6 @@ reactive_variables$pareto <- data.frame("Gen"=integer(),
                                         "nodes"=double(),
                                         "sensitivity"=double(),
                                         "sensibility"=double()) #there should be a way to add the column names from the available_objectives variable
-#colnames(reactive_variables$pareto) <- c("Gen", "Individual_index", "Generation_of_creaton", "Rank", "Nodes", available_objectives)
-
-progress_values <- reactiveValues()
-progress_values$best_values <- c()
-progress_values$mean_values <- c()
-progress_values$best_tree_nodes <- c()
-progress_values$mean_nodes <- c()
-progress_values$df <- data.frame("")
-
-visibility_flags <- reactiveValues()
-visibility_flags$test <- TRUE
-
-
 
 ########################
 # Functions ############
@@ -492,6 +479,7 @@ initiate_ea <- function(forest,dataset) {
     random_tree = PDT$'generate_random_tree'()
     PDT$'insert_tree_to_population'(random_tree)
   }
+  
   update_inclusion_of_objectives()
   
   nodes_objective_index <<- 1
@@ -507,31 +495,16 @@ initiate_ea <- function(forest,dataset) {
   return (crucial_values)
 }
 
-
-update_progress <- function(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes) {
-  #insert the values from the last evolution generation to their corresponding variables
-  progress_values$best_values <<- c(progress_values$best_values, current_best_value)
-  progress_values$mean_values <<- c(progress_values$mean_values, current_mean_value)
-  progress_values$best_tree_nodes <<- c(progress_values$best_tree_nodes, current_best_tree_nodes)
-  progress_values$mean_nodes <<- c(progress_values$mean_nodes, current_mean_nodes)
-}
-
-
-
-
-
 seed_crucial_values <- function(){
   crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
   enable("evolve")
   disable("accuracy_checkbox")
   disable("nodes_checkbox")
   disable("sensitivity_checkbox")
-  disable("sensibility_checkbox")
+  disable("specificity_checkbox")
   seeded_evolution <<- TRUE
   return (crucial_values)
 }
-
-
 
 ######################
 # Buttons ############
@@ -543,16 +516,7 @@ observeEvent(input$evolve, {
                {
                  for (g in 1:input$generations){
                    PDT$'evolve'()
-                   current_best_value <- PDT$'get_best_value_for_objective'()
-                   current_mean_value <- PDT$'get_population_mean_for_objective'()
-
-                   current_best_tree_nodes <- PDT$'get_best_individual'(objective_index=0)$'objective_values'[[nodes_objective_index+1]]
-
-                   current_mean_nodes <- PDT$'get_population_mean_for_objective'(objective_index = nodes_objective_index)
-                   
-                   update_progress(current_best_value, current_mean_value, current_best_tree_nodes, current_mean_nodes)
                    update_reactive_variables()
-                   
                    incProgress(1/input$generations)
                  }
                })
@@ -584,7 +548,7 @@ observeEvent(input$restart_evolution, { #Needs a lot of work
   enable("accuracy_checkbox")
   enable("nodes_checkbox")
   enable("sensitivity_checkbox")
-  enable("sensibility_checkbox")
+  enable("specificity_checkbox")
   reactive_variables$all_generations <- c()
 })
 
@@ -592,7 +556,7 @@ observeEvent(input$restart_evolution, { #Needs a lot of work
 observeEvent(input$update_tree, {
   output$network <- renderVisNetwork({
     PDT$'evaluate_population'()
-    best_tree <- PDT$'get_best_individual'()$'genotype'
+    best_tree <- PDT$'get_best_individual'(objective_index = 0)$'genotype'
     best_tree_nodes <- best_tree$'get_subtree_nodes'()
     connections <- best_tree$'get_connections'()
     connections
@@ -639,17 +603,6 @@ observeEvent(input$update_tree, {
 # Outputs ##############
 
 output$evolution_progress <- renderPlot({
-    # df<- cbind(data.frame(progress_values$best_values),
-    #            data.frame(progress_values$mean_values),
-    #            data.frame(progress_values$best_tree_nodes),
-    #            data.frame(progress_values$mean_nodes))
-    # Generation <- as.numeric(row.names(df))
-    # ggplot(data = df, aes(x=Generation))+
-    #   geom_line(aes(y=progress_values$best_values), color = "darkblue", size=1) +
-    #   geom_point(aes(y=progress_values$best_values), color = "darkblue", size=3) +
-    #   geom_line(aes(y=progress_values$mean_values), color = "blue", linetype="twodash") +
-    #   xlab("Generation") +
-    #   ylab("Accuracy")
     
     objective_name = "accuracy"
     obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
@@ -663,17 +616,6 @@ output$evolution_progress <- renderPlot({
 
 
 output$evolution_progress_nodes <- renderPlot({
-  # df<- cbind(data.frame(progress_values$best_values),
-  #           data.frame(progress_values$mean_values),
-  #           data.frame(progress_values$best_tree_nodes),
-  #           data.frame(progress_values$mean_nodes))
-  # Generation <- as.numeric(row.names(df))
-  # ggplot(data = df, aes(x=Generation))+
-  #   geom_line(aes(y=progress_values$best_tree_nodes), color = "darkblue", size = 1) +
-  #   geom_point(aes(y=progress_values$best_tree_nodes), color = "darkblue", size=3) +
-  #   geom_line(aes(y=progress_values$mean_nodes), color = "blue", linetype="twodash") +
-  #   xlab("Generation") +
-  #   ylab("Nodes")
   
   objective_name = "nodes"
   obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)

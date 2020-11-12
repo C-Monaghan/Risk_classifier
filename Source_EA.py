@@ -21,7 +21,8 @@ from inspect import signature
 import pandas as pd
 import copy
 import statistics as st
-from collections import defaultdict 
+from collections import defaultdict
+import pickle
 
 #text_to_operator = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
 #operator_to_text = {op.lt:"<",op.ge:">=",op.le:"<=",op.gt:">",op.eq:"==",op.ne:"!="}
@@ -423,10 +424,8 @@ class DecisionTree_EA: #oblique, binary trees
 		"""
 		tree = individual.genotype
 		tree_copy = tree.copy()
-		#50% chance to include the terminal as potential nodes to be swapped. 
-		#As terminals are the most common nodes in the trees and selecting them leads to bloat
-		include_terminals = rd.choice([True, False])
-		nodes = tree_copy.get_subtree_nodes(include_self = False, include_terminals = include_terminals)
+		nodes = tree_copy.get_subtree_nodes(include_self = False, include_terminals = True)
+		#include_terminals = rd.choice([True, False])
 		unlucky_node = rd.choice(nodes)
 		subtree_min_depth = 1
 		#subtree_max_depth = rd.randint(subtree_min_depth, len(self.attributes))
@@ -528,7 +527,7 @@ class DecisionTree_EA: #oblique, binary trees
 		The fittest one in them is returned.
 		"""
 		competitors = rd.sample(self.population, self.tournament_size)
-		winner = self.get_best_individual(population = competitors)
+		winner = self.get_best_individual(population = competitors, objective_index = 0)
 		return winner
 
 	def evaluate_tree(self,root_node,data=None):
@@ -807,6 +806,8 @@ class DecisionTree_EA: #oblique, binary trees
 		self.archive_population = []
 		self.hall_of_fame = []
 
-#Version control: 13:49 19/10/20
-def test():
-	return 1, 2
+	def save_tree(self, tree):
+		pass
+	
+	def load_tree(self, tree):
+		pass
