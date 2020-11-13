@@ -153,8 +153,6 @@ shinyServer(function(input, output, session){
       },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
       
       output$colred <- renderTable({
-        
-        
         colnames(Main()$Reduced_data)
         
       }, caption=paste("Reduced variables in the dataset"),
@@ -545,7 +543,8 @@ shinyServer(function(input, output, session){
     reactive_variables$all_generations <- c()
   })
   
- mynetwork<-reactive({
+ mynetwork<-function(){
+   print("ok")
    PDT$'evaluate_population'()
    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
    best_tree_nodes <- best_tree$'get_subtree_nodes'()
@@ -585,7 +584,7 @@ shinyServer(function(input, output, session){
    net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
      visEdges(arrows = "from") %>% 
      visHierarchicalLayout() 
- })
+ }
       
   
   observeEvent(input$update_tree, {
