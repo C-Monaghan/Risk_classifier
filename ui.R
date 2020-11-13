@@ -132,7 +132,7 @@ shinyUI(ui = tagList(
     ),  # Main panel for displaying outputs ----
     mainPanel(width = 9, id = "main_layout",
               tabsetPanel(id = "tabs",  selected = "steps",
-                          #  type="tab",
+                          
                           tabPanel("Quick Start", value = "steps",
                                    column(width = 5, offset = 0.5,
                                           br(),
@@ -176,51 +176,55 @@ shinyUI(ui = tagList(
     ######################################################################################
     
     tabPanel("Evolutionary Algorithm",
-             sidebarPanel(width = 3,
-                          sliderInput("generations",
-                                      "Generations",
-                                      min = 5,
-                                      max=100,
-                                      step = 5,
-                                      animate = TRUE,
-                                      value = 10),
+             sidebarPanel(conditionalPanel(condition="input.EA_tabs=='generation'",
+                                           width = 3,
                           actionButton("seed",
-                                       "Initiate Genetic Program"),
-                          actionButton("restart_evolution",
+                                       "Initiate Genetic Program")),
+                          conditionalPanel(condition="input.EA_tabs=='evolve'",
+                                           sliderInput("generations",
+                                                       "Generations",
+                                                       min = 5,
+                                                       max=100,
+                                                       step = 5,
+                                                       animate = TRUE,
+                                                       value = 10),
+                                           actionButton("restart_evolution",
                                        "Restart evoution"),
                           actionButton("evolve",
-                                       "Evolve"),
-                          actionButton("save_tree_python",
-                                       "Save current best tree"),
-                          actionButton("loade_tree_python",
-                                       "Load tree"),
+                                       "Evolve") ,
                           checkboxInput("accuracy_checkbox", "Accuracy", value = TRUE, width = NULL),
                           checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
                           checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
-                          checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)
+                          checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)),
+                          conditionalPanel(condition="input.EA_tabs=='tree'",
+                                           actionButton("save_tree_python",
+                                       "Save current best tree"),
+                          actionButton("loade_tree_python",
+                                       "Load tree"),downloadButton(outputId="net",label ="Download the tree in .html"))
+                         
 
                           ),
-              mainPanel(tabsetPanel(type="tab",
-                                    tabPanel("Set of available splits",
-                                             dataTableOutput("crucial_values")),
+              mainPanel(tabsetPanel(id = "EA_tabs",  
+                                    tabPanel("Set of available splits", value="generation",
+                                             dataTableOutput("crucial_values"),
                                              actionButton("remove_split",
-                                                          "Remove selected values"),
+                                                          "Remove selected values")),
                                              #dataTableOutput("crucial_values")),
                                              
-                                    tabPanel("Progress charts",
+                                    tabPanel("Progress charts", value="evolve",
                                              plotOutput("pareto_front"),
                                              plotOutput("evolution_progress"),
                                           
                                              plotOutput("evolution_progress_nodes")),
-                                    tabPanel("View trees",
+                                    tabPanel("View trees", value="tree",
                                              actionButton("update_tree",
                                                           "View best tree"),
                                              visNetworkOutput("network", height = "800px", width = "800px"),
                                              DTOutput("tree_partitions"))
                                     )
-                        )
+                        ))
 
-            ),
+            ,
 
 
 
