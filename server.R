@@ -332,8 +332,8 @@ shinyServer(function(input, output, session){
   
   
   
-  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-  #use_python("C:/Users/fredx/Anaconda3",required=T)
+  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  use_python("C:/Users/fredx/Anaconda3",required=T)
   reticulate::source_python("Source_EA.py")
   
   #Parameters
@@ -426,8 +426,8 @@ shinyServer(function(input, output, session){
       std_dev <- as.numeric(sd(current_gen_objective[,objective_name]))
       low <- mean_value - std_dev
       high <- mean_value + std_dev
-      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Best",Value=best_value,Low=best_value,High=best_value))
-      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Mean",Value=mean_value,Low=low,High=high))
+      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Max value",Value=best_value,Low=best_value,High=best_value))
+      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Population mean",Value=mean_value,Low=low,High=high))
     }  
   }
   
@@ -516,6 +516,14 @@ shinyServer(function(input, output, session){
     enable("restart_evolution")
   })
   
+  # observeEvent(input$remove_split,{
+  #   print(paste0(input$crucial_values_cells_selected))
+  #   for (selected_cell in input$crucial_values_cells_selected){
+  #     attribute_name <- colnames()
+  #   }
+  #   
+  # })
+  
   
   observeEvent(input$seed, {
     crucial_values <- seed_crucial_values()
@@ -538,16 +546,42 @@ shinyServer(function(input, output, session){
   observeEvent(input$restart_evolution, { #Needs a lot of work
     PDT$'restart_evolution'()
     crucial_values <- seed_crucial_values()
-    enable("accuracy_checkbox")
-    enable("nodes_checkbox")
-    enable("sensitivity_checkbox")
-    enable("specificity_checkbox")
-    reactive_variables$all_generations <- c()
+    #enable("accuracy_checkbox")
+    #enable("nodes_checkbox")
+    #enable("sensitivity_checkbox")
+    #enable("specificity_checkbox")
+    reactive_variables$objectives <- data.frame("Index"=0:(max_objectives-1),
+                                                "Objective_name"=available_objectives,
+                                                "To_max" = to_max,
+                                                "Included" = initially_included,
+                                                "Best_values" = vector(mode="double", length=max_objectives),
+                                                "Mean_values" = vector(mode="double", length=max_objectives),
+                                                "Std_devs" = vector(mode="double", length=max_objectives))
+    reactive_variables$progress <- data.frame("Gen"=integer(),
+                                              "Objective_name"=character(),
+                                              "Type"=character(),
+                                              "Value"=double(),
+                                              "Low"=double(),
+                                              "High"=double(),
+                                              stringsAsFactors = FALSE)
+    reactive_variables$pareto <- data.frame("Gen"=integer(),
+                                            "Individual_index"=integer(),
+                                            "Generation_of_creaton"=integer(),
+                                            "Rank"=integer(),
+                                            "Nodes"=integer(),
+                                            "accuracy"=double(),
+                                            "nodes"=double(),
+                                            "sensitivity"=double(),
+                                            "specificity"=double()) #there should be a way to add the column names from the available_objectives variable
+    
   })
   
  mynetwork<-reactive({
+   print("OK")
+   input$update_tree
    PDT$'evaluate_population'()
    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
+   best_tree <- best_tree$'clean_and_reduce'()
    best_tree_nodes <- best_tree$'get_subtree_nodes'()
    connections <- best_tree$'get_connections'()
    connections
@@ -605,7 +639,50 @@ mynetwork()
       mynetwork() %>% visSave(con)
     }
   )
-     
+    
+  observeEvent(input$max_nodes_enabled, 
+                {
+                  if (input$max_nodes_enabled == TRUE){
+                    enable("max_nodes_value")
+                  }
+                  else{
+                    disable("max_nodes_value")
+                  }
+                }
+  )
+  
+  observeEvent(input$min_nodes_enabled, 
+               {
+                 if (input$min_nodes_enabled == TRUE){
+                   enable("min_nodes_value")
+                 }
+                 else{
+                   disable("min_nodes_value")
+                 }
+               }
+  )
+  
+  observeEvent(input$max_depth_enabled, 
+               {
+                 if (input$max_depth_enabled == TRUE){
+                   enable("max_depth_value")
+                 }
+                 else{
+                   disable("max_depth_value")
+                 }
+               }
+  )
+  
+  observeEvent(input$min_depth_enabled, 
+               {
+                 if (input$min_depth_enabled == TRUE){
+                   enable("min_depth_value")
+                 }
+                 else{
+                   disable("min_depth_value")
+                 }
+               }
+  )
   
   ########################
   # Outputs ##############

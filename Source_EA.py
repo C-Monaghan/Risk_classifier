@@ -251,6 +251,36 @@ class DT_Node:
 			else:
 				return parent.node_already_in_branch(node=node)
 
+	def clean_and_reduce(self):
+		if self.is_useful_split:
+			self._cleaning()
+		return self
+
+	def _cleaning(self):
+		for child in self.children:
+			if child.is_useful_split():
+				child._cleaning()
+			else:
+				new_child = child._retrieve_useful_child()
+				self.replace_child(new_child=new_child, old_child=child)
+
+	def _retrieve_useful_child(self):
+		if self.is_terminal or self.is_useful_split():
+			return self
+		else:
+			useful_node = None
+			for child in self.children:
+				if child.visits_count > 0:
+					useful_node = child._retrieve_useful_child()
+					break
+			return useful_node
+	
+	def is_useful_split(self):
+		for child in self.children:
+			if child.visits_count == 0:
+				return False
+		return True
+		
 	def copy(self, parent=None): #missing test: evaluate the copy
 		"""
 		Returns an unrelated new item with the same characteristics
@@ -314,7 +344,7 @@ class DecisionTree_EA: #oblique, binary trees
 		self.elites = 0
 		self.fronts = defaultdict(lambda:[])                   #used in NSGA-II
 
-	def add_operator(self,operator_name): #operators with compatibility to certain attributes?
+	def add_operator(self,operator_name):
 		if operator_name not in self.operators:
 			self.operators.append(operator_name)
 			print("Added new operator:",operator_name)
@@ -371,6 +401,9 @@ class DecisionTree_EA: #oblique, binary trees
 				print("The objective ", objective_name," is not being considered")
 		else:
 			print("There are no objectives")
+
+	def remove_attribute(self,name): #CHANGE: missing
+		pass
 
 	def _one_point_crossover(self, individual1, individual2):
 		"""
@@ -557,7 +590,7 @@ class DecisionTree_EA: #oblique, binary trees
 			population = self.population
 		for objective_index, objective in self.objectives.items():
 			for ind in population:
-				if not ind.evaluated_on_static_objectives: #A boolean value that prevents from evaluating twice a same individual
+				if not ind.evaluated_on_static_objectives: #A boolean value that prevents a same individual from being evaluated twice
 					if objective.objective_name == "accuracy":
 						labels = self.evaluate_tree(ind.genotype, data = self.data)
 						objective_value = self.calculate_accuracy(model_output_labels=labels)
@@ -588,9 +621,6 @@ class DecisionTree_EA: #oblique, binary trees
 		"""
 		self.data = pd.DataFrame(data)
 		self.output_labels = list(labels)
-
-	def remove_attribute(self,name): #CHANGE: missing
-		pass
 
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self._parse_tree_r(tree)
