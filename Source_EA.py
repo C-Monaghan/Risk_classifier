@@ -257,7 +257,8 @@ class DT_Node:
 		return self
 
 	def _cleaning(self):
-		for child in self.children:
+		current_children = [c for c in self.children]
+		for child in current_children:
 			if child.is_useful_split():
 				child._cleaning()
 			else:
@@ -317,7 +318,17 @@ class DT_Node:
 	#def __eq__(self, other):
 
 class DecisionTree_EA: #oblique, binary trees
-	def __init__(self, tournament_size = 3, crossover_rate = 0.5, mutation_rate = 0.4, elitism_rate = 0.1, hall_of_fame_size = 3):
+	def __init__(self, 
+				tournament_size = 3, 
+				crossover_rate = 0.5, 
+				mutation_rate = 0.4, 
+				elitism_rate = 0.1, 
+				hall_of_fame_size = 3,
+				max_depth = None,
+				max_nodes = None,
+				min_depth = None,
+				min_nodes = None,
+				objective_names = []):
 
 		self.output_labels = []
 		self.current_generation = 0
@@ -343,6 +354,13 @@ class DecisionTree_EA: #oblique, binary trees
 		self.mutations = 0
 		self.elites = 0
 		self.fronts = defaultdict(lambda:[])                   #used in NSGA-II
+		
+		max_depth = max_depth
+		max_nodes = max_nodes
+		min_depth = min_depth
+		min_nodes = min_nodes
+		for objective_name in objective_names:
+			self.add_objective(objective_name=objective_name)
 
 	def add_operator(self,operator_name):
 		if operator_name not in self.operators:

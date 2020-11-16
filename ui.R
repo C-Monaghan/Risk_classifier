@@ -177,33 +177,22 @@ shinyUI(ui = tagList(
     
     tabPanel("Evolutionary Algorithm",
              sidebarPanel(width = 3,
-                          conditionalPanel(condition="input.EA_tabs=='generation'",
-                                           width = 3,
-                          actionButton("seed",
-                                       "Initiate Genetic Program")),
+                          conditionalPanel(condition="input.EA_tabs=='setup'", width = 3,
+                                            actionButton("initiate_gp","Initiate Genetic Program")),
+                          conditionalPanel(condition="input.EA_tabs=='splits'", width = 3,
+                                           actionButton("remove_split","Remove selected splits")),
                           conditionalPanel(condition="input.EA_tabs=='evolve'",
-                                           sliderInput("generations",
-                                                       "Generations",
-                                                       min = 5,
-                                                       max=100,
-                                                       step = 5,
-                                                       animate = TRUE,
-                                                       value = 10),
-                                           actionButton("restart_evolution",
-                                       "Restart evoution"),
-                          actionButton("evolve",
-                                       "Evolve") ,
-                          checkboxInput("accuracy_checkbox", "Accuracy", value = TRUE, width = NULL),
-                          checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
-                          checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
-                          checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)),
+                                           sliderInput("generations","Generations",min = 5,max=100,step = 5,animate = TRUE,value = 10),
+                                            actionButton("evolve","Evolve") ,
+                                            actionButton("restart_evolution","Restart evoution"),
+                                            checkboxInput("accuracy_checkbox", "Accuracy", value = TRUE, width = NULL),
+                                            checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
+                                            checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
+                                            checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)),
                           conditionalPanel(condition="input.EA_tabs=='tree'",
-                                           actionButton("save_tree_python",
-                                       "Save current best tree"),
-                          actionButton("load_tree_python",
-                                       "Load tree"),downloadButton(outputId="net",label ="Download the tree in .html"))
-                         
-
+                                           actionButton("save_tree_python","Save current best tree"),
+                                            actionButton("load_tree_python","Load tree"),
+                                            downloadButton(outputId="net",label ="Download the tree in .html"))
                           ),
               mainPanel(tabsetPanel(id = "EA_tabs",
                                     tabPanel("Setup", value="setup",
@@ -212,61 +201,62 @@ shinyUI(ui = tagList(
                                                checkboxInput("accuracy_objective", "Accuracy", value = TRUE, width = NULL),
                                                checkboxInput("nodes_objective", "Size", value = TRUE, width = NULL)
                                              ),
-                                             h4("Constraints"),
+                                             h4("Genetic Program parameters"),
+                                             wellPanel(
+                                               fluidRow(
+                                                 column(3,
+                                                        numericInput("population_size", "Population size", value=100, min=20, max=1000, step=5),
+                                                        numericInput("tournament_size", "Tournament size", value=5, min=2, max=20, step=1),
+                                                        numericInput("halloffame_size", "Hall of fame size", value=5, min=1, max=20, step=1),
+                                                        numericInput("mutation_rate", "Mutation rate", value=0.6, min=0, max=1, step=0.05),
+                                                        numericInput("crossover_rate", "Crossover rate", value=0.4, min=0, max=1, step=0.05),
+                                                        numericInput("elitism_rate", "Elitism rate", value=0.4, min=0, max=1, step=0.05)
+                                                 )
+                                               )
+                                             ),
+                                             h4("Constraints of the decision tree output"),
                                              wellPanel(
                                                fluidRow(
                                                 column(2,
-                                                  checkboxInput("max_nodes_enabled", "", value = FALSE, width = NULL)
+                                                  checkboxInput("max_nodes_enabled", "Max splits", value = FALSE, width = NULL)
                                                   ),
                                                 column(3,
-                                                  numericInput("max_nodes_value", "Max splits", 10)
+                                                  numericInput("max_nodes_value", "", 999)
                                                   )
                                                 ),
                                                fluidRow(
                                                  column(2,
-                                                        checkboxInput("max_depth_enabled", "", value = FALSE, width = NULL)
+                                                        checkboxInput("max_depth_enabled", "Max depth", value = FALSE, width = NULL)
                                                  ),
                                                  column(3,
-                                                        numericInput("max_depth_value", "Max depth", 10)
+                                                        numericInput("max_depth_value", "", 999)
                                                  )
                                                ),
                                                fluidRow(
                                                  column(2,
-                                                        checkboxInput("min_nodes_enabled", "", value = FALSE, width = NULL)
+                                                        checkboxInput("min_nodes_enabled", "Min splits", value = FALSE, width = NULL)
                                                  ),
                                                  column(3,
-                                                        numericInput("min_nodes_value", "Min splits", 10)
+                                                        numericInput("min_nodes_value", "", 1)
                                                  )
                                                ),
                                                fluidRow(
                                                  column(2,
-                                                        checkboxInput("min_depth_enabled", "", value = FALSE, width = NULL)
+                                                        checkboxInput("min_depth_enabled", "Min depth", value = FALSE, width = NULL)
                                                  ),
                                                  column(3,
-                                                        numericInput("min_depth_value", "Min depth", 10)
-                                                 )
-                                               )
-                                             ),
-                                             h4("Parameters"),
-                                             wellPanel(
-                                               fluidRow(
-                                                 column(3,
-                                                   numericInput("population_size", "Population size", value=100, min=20, max=1000, step=5),
-                                                   numericInput("mutation_rate", "Mutation rate", value=0.6, min=0, max=1, step=0.05),
-                                                   numericInput("crossover_rate", "Crossover rate", value=0.4, min=0, max=1, step=0.05)
+                                                        numericInput("min_depth_value", "", 1)
                                                  )
                                                )
                                              )
+                                             
                                             ),
-                                    tabPanel("Set of available splits", value="generation",
-                                             dataTableOutput("crucial_values"),
-                                             actionButton("remove_split",
-                                                          "Remove selected values")),
-                                    #dataTableOutput("crucial_values")),
+                                    tabPanel("Set of available splits", value="splits",
+                                             dataTableOutput("crucial_values")
+                                             ),
                                     tabPanel("Progress charts", value="evolve",
                                              plotOutput("pareto_front"),
                                              plotOutput("evolution_progress"),
-                                          
                                              plotOutput("evolution_progress_nodes")),
                                     tabPanel("View trees", value="tree",
                                              actionButton("update_tree",

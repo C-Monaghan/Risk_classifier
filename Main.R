@@ -25,9 +25,6 @@ library(hrbrthemes)
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
-#use_python("C:/Users/fredx/Anaconda3",required=T)
-#use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-#source_python("Source_EA.py")
 
 # Cleaning the data before using
 #default_data<-Final_Data
