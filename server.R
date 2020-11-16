@@ -330,31 +330,20 @@ shinyServer(function(input, output, session){
   
   
   
-  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
   #use_python("C:/Users/fredx/Anaconda3",required=T)
+  use_virtualenv("temp_env")
   reticulate::source_python("Source_EA.py")
   
   #Parameters
   available_objectives <- c("accuracy", "nodes", "sensitivity", "specificity") #ordering must be kept
   to_max <- c(TRUE, FALSE, TRUE, TRUE)
   initially_included <- c(FALSE, FALSE, FALSE, FALSE)
-  PDT <- DecisionTree_EA(tournament_size = 5,
-                         crossover_rate = 0.4,
-                         mutation_rate = 0.6,
-                         elitism_rate = 0.0,
-                         hall_of_fame_size = 3)
-  
   
   #Initial setup
-  #use_python("C:/Users/fredx/Anaconda3",required=T) #Using python means that R sessions needs to be restarted every time or it will conflict
-  
-  
-  
-  
+  PDT <- NULL
   disable("evolve")
   disable("restart_evolution")
-  disable("accuracy_checkbox")
-  seeded_evolution <- FALSE
   nodes_objective_index <- NULL
   accuracy_objective_index <- NULL
   max_objectives <- length(available_objectives)
@@ -384,7 +373,7 @@ shinyServer(function(input, output, session){
                                           "nodes"=double(),
                                           "sensitivity"=double(),
                                           "specificity"=double()) #there should be a way to add the column names from the available_objectives variable
-  #colnames(reactive_variables$pareto) <- c("Gen", "Individual_index", "Generation_of_creaton", "Rank", "Nodes", available_objectives)
+  reactive_variables$crucial_values_df <- NULL
   
   ########################
   # Functions ############
@@ -424,8 +413,8 @@ shinyServer(function(input, output, session){
       std_dev <- as.numeric(sd(current_gen_objective[,objective_name]))
       low <- mean_value - std_dev
       high <- mean_value + std_dev
-      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Best",Value=best_value,Low=best_value,High=best_value))
-      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Mean",Value=mean_value,Low=low,High=high))
+      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Max value",Value=best_value,Low=best_value,High=best_value))
+      reactive_variables$progress <- rbind(reactive_variables$progress, data.frame(Gen=current_generation,Objective_name=objective_name,Type="Population mean",Value=mean_value,Low=low,High=high))
     }  
   }
   
@@ -444,8 +433,18 @@ shinyServer(function(input, output, session){
   }
   
   
-  initiate_ea <- function(forest,dataset) {
+  initiate_gp <- function(forest,dataset) {
     #Set up the EA to start evolving
+    PDT <<- DecisionTree_EA(tournament_size = input$tournament_size,
+                    crossover_rate = input$crossover_rate,
+                    mutation_rate = input$mutation_rate,
+                    elitism_rate = input$elitism_rate,
+                    hall_of_fame_size = input$elitism_rate,
+                    max_depth = input$max_depth_value,
+                    min_depth = input$min_depth_value,
+                    max_nodes = input$max_nodes_value,
+                    max_nodes = input$min_nodes_value
+                    )
     
     #Create a reference to the dataset in the EA, create attribute objects for each
     PDT$'adapt_to_data'(labels = dataset$Class, data=dataset) #the labels are hardcoded to Class
@@ -469,6 +468,7 @@ shinyServer(function(input, output, session){
       random_tree = PDT$'generate_random_tree'()
       PDT$'insert_tree_to_population'(random_tree)
     }
+    
     update_inclusion_of_objectives()
     
     nodes_objective_index <<- 1
@@ -480,19 +480,22 @@ shinyServer(function(input, output, session){
     len <- m_l - len
     crucial_values <- data.frame(mapply( function(x,y) c( x , rep( NA , y ) ) , values , len ))
     colnames(crucial_values) <- names
-    
-    return (crucial_values)
+    reactive_variables$crucial_values_df <<- crucial_values
   }
   
-  seed_crucial_values <- function(){
-    crucial_values <- initiate_ea(forest = Main()$Trees, dataset = Main()$Train_data)
-    enable("evolve")
-    disable("accuracy_checkbox")
-    disable("nodes_checkbox")
-    disable("sensitivity_checkbox")
-    disable("specificity_checkbox")
-    seeded_evolution <<- TRUE
-    return (crucial_values)
+  update_default_rates <- function(){
+    objectives = 0
+    if (input$accuracy_objective == TRUE) objectives <- objectives + 1
+    if (input$nodes_objective == TRUE) objectives <- objectives + 1
+    if (objectives == 1){
+      updateNumericInput(session, "mutation_rate", value = 0.5)
+      updateNumericInput(session, "crossover_rate", value = 0.4)
+      updateNumericInput(session, "elitism_rate", value = 0.1)
+    } else{
+      updateNumericInput(session, "mutation_rate", value = 0.6)
+      updateNumericInput(session, "crossover_rate", value = 0.4)
+      updateNumericInput(session, "elitism_rate", value = 0.0)
+    }
   }
   
   
@@ -515,38 +518,35 @@ shinyServer(function(input, output, session){
   })
   
   
-  observeEvent(input$seed, {
-    crucial_values <- seed_crucial_values()
-    output$crucial_values = renderDT(crucial_values %>% datatable(selection=list(target="cell"),
-                                                                  options = list(scrollX = TRUE,
-                                                                                 #scrolly = TRUE,
-                                                                                 paginate = T,
-                                                                                 lengthMenu = c(5, 10, 15),
-                                                                                 pageLength = 15,
-                                                                                 initComplete = JS(
-                                                                                   "function(settings, json) {",
-                                                                                   "$(this.api().table().header()).css({'color': '#000'});",
-                                                                                   "}")
-                                                                  )) %>% DT::formatStyle(columns = names(crucial_values), color="blue"))
-    
-    
+  # observeEvent(input$remove_split,{
+  #   print(paste0(input$crucial_values_cells_selected))
+  #   for (selected_cell in input$crucial_values_cells_selected){
+  #     attribute_name <- colnames()
+  #   }
+  #   
+  # })
+  
+  
+  observeEvent(input$initiate_gp, {
+    initiate_gp(forest = Main()$Trees, dataset = Main()$Train_data)
+    enable("evolve")
+    isolate({
+      updateTabsetPanel(session, "EA_tabs",
+                        selected = "splits")
+    })
   })
   
   
   observeEvent(input$restart_evolution, { #Needs a lot of work
     PDT$'restart_evolution'()
-    crucial_values <- seed_crucial_values()
-    enable("accuracy_checkbox")
-    enable("nodes_checkbox")
-    enable("sensitivity_checkbox")
-    enable("specificity_checkbox")
-    reactive_variables$all_generations <- c()
+    
   })
   
- mynetwork<-function(){
-   print("ok")
+ mynetwork<-reactive({
+   input$update_tree
    PDT$'evaluate_population'()
    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
+   best_tree <- best_tree$'clean_and_reduce'()
    best_tree_nodes <- best_tree$'get_subtree_nodes'()
    connections <- best_tree$'get_connections'()
    connections
@@ -604,13 +604,29 @@ mynetwork()
       mynetwork() %>% visSave(con)
     }
   )
-     
+    
+  observeEvent(input$max_nodes_enabled, {toggle("max_nodes_value")})
+  
+  observeEvent(input$min_nodes_enabled, {toggle("min_nodes_value")})
+  
+  observeEvent(input$max_depth_enabled, {toggle("max_depth_value")})
+  
+  observeEvent(input$min_depth_enabled, {toggle("min_depth_value")})
+  
+  observeEvent(input$accuracy_objective, {update_default_rates()})
+  
+  observeEvent(input$nodes_objective, {update_default_rates()})
+  
+  observeEvent(input$population_size,{
+    updateNumericInput(session, "tournament_size", max = input$population_size - 1)
+  })
+  
+  
   
   ########################
   # Outputs ##############
   
   output$evolution_progress <- renderPlot({
-    
     objective_name = "accuracy"
     obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
     ggplot(data = obj_subset, aes(x=Gen, y=Value, color=Type))+
@@ -623,7 +639,6 @@ mynetwork()
   
   
   output$evolution_progress_nodes <- renderPlot({
-    
     objective_name = "nodes"
     obj_subset <- subset(reactive_variables$progress, Objective_name == objective_name)
     ggplot(data = obj_subset, aes(x=Gen, y=Value, color=Type))+
@@ -642,5 +657,16 @@ mynetwork()
       theme_ipsum()
   })
   
+  output$crucial_values <- renderDT({reactive_variables$crucial_values_df %>% datatable(selection=list(target="cell"),
+                                    options = list(scrollX = TRUE,
+                                                   #scrolly = TRUE,
+                                                   paginate = T,
+                                                   lengthMenu = c(5, 10, 15),
+                                                   pageLength = 15,
+                                                   initComplete = JS(
+                                                     "function(settings, json) {",
+                                                     "$(this.api().table().header()).css({'color': '#000'});","}")
+                                    )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
+  })
   
 })
