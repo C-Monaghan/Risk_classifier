@@ -66,6 +66,7 @@ shinyUI(ui = tagList(
                                                                                                                            icon = icon("question"), size = "extra-small")),
                                                                                  multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
                                                                                  placeholder = "Enter Your Data Here"),
+                                                                       
                                                                        bsPopover("main_data_tooltip", title="File format",
                                                                                  content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the variable to be estimated.",
                                                                                  trigger = "hover"),
@@ -123,8 +124,8 @@ shinyUI(ui = tagList(
                                                                                                                                                                               'Max. AUROC'),choiceValues = c('ind_max_acc','ind_min_gini','ind_max_AUROC'),selected = 'ind_max_acc'),
                                                                        
                                                                        # Downloading the file type
-                                                                       h5("3.Select the type of plot to be downloaded:",align="centre"),          
-                                                                       radioButtons("filetype","Select the file type",choices = list("png","pdf"),selected = "pdf"),
+                                                                                
+                                                                       radioButtons("filetype","3.Select the type of plot to be downloaded ",choices = list("png","pdf"),selected = "pdf"),
                                                                        actionButton("return_parameter_button", "Return to Method Specification",
                                                                                     width = "100%", class = "btn-default")
                                                       ),
@@ -166,7 +167,7 @@ shinyUI(ui = tagList(
                           tabPanel(" View Dataset ", value = "data",dataTableOutput("dataset"),tableOutput("col")),
                           tabPanel("Method Specification", value="specification",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
                           tabPanel("Reduced Dataset after variable selection",value="download",dataTableOutput("Reduced_data"), tableOutput("colred")),
-                          tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
+                          tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Show desired plot button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
               )
     )
     ),
