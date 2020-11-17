@@ -584,7 +584,7 @@ shinyServer(function(input, output, session){
    net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
      visEdges(arrows = "from") %>% 
      visHierarchicalLayout() 
- }
+ })
       
   
   observeEvent(input$update_tree, {
