@@ -103,6 +103,9 @@ shinyServer(function(input, output, session){
     input$trees
   })
   
+  max_depth<-reactive({
+    input$max_depth
+  })
   
   global <- reactiveValues(response=FALSE)
   global_plot <- reactiveValues(value=TRUE)
@@ -138,7 +141,7 @@ shinyServer(function(input, output, session){
   
   Main<-reactive({
     
-    Classifier(original_data(),  method(),trees())
+    Classifier(original_data(),  method(), trees(), max_depth())
     
   })  
   
@@ -581,10 +584,11 @@ shinyServer(function(input, output, session){
      i=i+1
    }
    #new_df
-   net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
+   net<-visNetwork(new_df, new_edges, height = "500px", width = "100%")%>% 
+     visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>% 
      visEdges(arrows = "from") %>% 
      visHierarchicalLayout() 
- }
+ })
       
   
   observeEvent(input$update_tree, {

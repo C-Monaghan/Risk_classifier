@@ -11,18 +11,55 @@
 </head>
 
 <body>
-
-<h3 style="text-align: center;">&nbsp;<strong>Machine Learning based Classifier</strong></h3>
+  
+<h2 style="text-align: center;">&nbsp;<strong>Machine Learning based Classifier</strong></h2>
 <div>
 <h3><strong> Technical details of the methodologies used in the classifier</strong></h3>
-<ol>
-  <li><h4><strong> Lasso Regression : </strong></h4></li>
-  <h5> Firstly, without the loss of generality, we standarised the response and predictor variable. After standardising, we no longer require the interecept term in the model, which is as follows:</h5>
-  <h5> Y_i = \beta_i X_{i,1} + \ldots \beta_{p-1} X_{i,p-1} + \epsilon_i </h5>
-   <li><h4><strong> Ridge Regression : </strong></h4></li>
-</ol>
 </div>
-
+<ol>
+  <h5> Firstly, without the loss of generality, we standarised the response and predictor variable. After standardising, we no longer require the intercept term in the model, which is as follows:</h5>
+ $$ Y_i = \beta_1 X_{i,1} + \ldots \beta_{p-1} X_{i,p-1} + \epsilon_i $$ 
+ 
+  <ul>
+    <li>For Ordinary Least Sqaures (OLS), we minimises:</li>
+  $$ (Y-X \beta)^T (Y-X \beta) $$
+  </ul>  
+  
+  <li><h4><strong> Ridge Regression : </strong></h4></li>
+   <ul>
+  <li> Ridge Regression regularises the coefficients, so that we minimise</li>
+  $$ (Y-X \beta)^T (Y-X \beta) + \lambda \sum_{j=1}^{p-1} \beta^2_{j} $$
+  <p>
+minimising above subject to the constraint that \( \sum_{j=1}^{p-1} \beta^2_{j} < c \). This constraint penalises large values for any \( \beta_{j} \) and so shrinks the estimates to 0. It can guide variable selection. Those coefficients that shrink rapidly to 0 as \(\lambda\) increases may be considered candidates for removal from the model.
+</p>
+<p>
+<li>The parameter \(\lambda\) controls the bias of the estimator:</li>
+ <ul>
+   <li> \(\lambda = 0\) : No constraint \(\to\) OLS.</li>
+   <li> \(\lambda > 0\): Estimates are biased but more stable than for OLS. </li>
+     <li> Large values results in a large penalty in () and \(\beta_j \to \) 0 \(\forall j\).</li>
+   </ul>  
+</ul>  
+</p>
+ For more information, \(\href{https://ncss-wpengine.netdna-ssl.com/wp-content/themes/ncss/pdf/Procedures/NCSS/Ridge_Regression.pdf}{Ridge Regression}\).
+ 
+    <li><h4><strong> Lasso Regression : </strong></h4></li>
+     <ul>
+       <li> Lasso regression estimates are found my minimising:</li>
+       $$ (Y-X \beta)^T (Y-X \beta) + \lambda \sum_{j=1}^{p-1} |\beta_{j}| $$
+       <p>This is equivalent to minimising (Y - X \(\beta\))\(^T\)(Y - X \(\beta\)) subject to the constraint that \(\sum_{j=1}^{p-1} |\beta_{j}| < c\).The property that lasso shrinks parameters to exactly zero means it can be used for variable selection. More parameters are set to 0 as \(\lambda\) increases.
+         </p>
+         <p>
+          <li> Again, large values for \(\beta_j\) are penalised and the estimates are shrunk to exactly 0 for large \(\lambda\).</li>
+          <ul> 
+          <li> \(\lambda = 0\) : No constraint \(\to\) OLS.</li>
+           <li> \(\lambda = \inf\) : shrinks all parameters to 0.</li>
+            <li> In between, some parameters will be set to zero while some will not.</li>
+          </ul>
+      </ul> 
+      </p>
+      For more information, \(\href{https://www.mygreatlearning.com/blog/understanding-of-lasso-regression/}{Lasso Regression}\).
+</ol>
 
 </body>
 </html>

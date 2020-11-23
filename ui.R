@@ -107,14 +107,27 @@ shinyUI(ui = tagList(
                                                       conditionalPanel(condition="input.tabs=='specification'",
                                                                        
                                                                        h4("Please Select Input Values:",align="centre"),
-                                                                       # Input: Variable Selection Method ----
-                                                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Lasso Regression","Ridge Regression"),selected = "Lasso Regression"),
                                                                        
+                                                                       # Input: Variable Selection Method ----
+                                                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression"," Neither"),selected = "Ridge Regression"),
+                                                                       
+                                                                       h4("Constraints while building decision trees"),
                                                                        
                                                                        # Input: No. of Decision Trees ----
                                                                        sliderInput("trees", "Step 2: How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                                                    min = 20, max=800,
-                                                                                   step = 4,animate = TRUE,value = 100),
+                                                                                   step = 4,animate = TRUE,value = 100), 
+                                                                       
+                                                                       # Input: Constraints while building decision tree ----
+          
+                                                                       
+                                                                       sliderInput("max_depth", "Max. depth of the tree",
+                                                                                   min = 1, max=30,
+                                                                                   step = 1,animate = TRUE,value = 10)
+                                                                       
+                                                                       
+                                                                       
+                                                                      
                                                       ),
                                                       conditionalPanel(condition="input.tabs=='plot'",
                                                                        
@@ -166,7 +179,7 @@ shinyUI(ui = tagList(
                                    )),
                           tabPanel(" View Dataset ", value = "data",dataTableOutput("dataset"),tableOutput("col")),
                           tabPanel("Method Specification", value="specification",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
-                          tabPanel("Reduced Dataset after variable selection",value="download",dataTableOutput("Reduced_data"), tableOutput("colred")),
+                          tabPanel("Dataset after variable selection",value="download",dataTableOutput("Reduced_data"), tableOutput("colred")),
                           tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Show desired plot button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
               )
     )
