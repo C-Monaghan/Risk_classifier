@@ -24,8 +24,7 @@ shinyUI(ui = tagList(
     theme = shinytheme("flatly"),  # <--- To use a theme, uncomment this
     strong("MI based classifier"), # Main title name
     
-    
-    
+
     # Home --------------------------------------------------------------------
     tabPanel("Home",
              column(12, align="center",
@@ -109,7 +108,7 @@ shinyUI(ui = tagList(
                                                                        h4("Please Select Input Values:",align="centre"),
                                                                        
                                                                        # Input: Variable Selection Method ----
-                                                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression"," Neither"),selected = "Ridge Regression"),
+                                                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression"," Neither (Original Dataset)"),selected = "Ridge Regression"),
                                                                        
                                                                        h4("Constraints while building decision trees"),
                                                                        
@@ -158,7 +157,7 @@ shinyUI(ui = tagList(
                                                 br(),
                                                 tags$li("Specify the method and its parameters to be selected in the 'Method Specification' tab and after that click 'Calculate' button for the method to run."),
                                                 br(),
-                                                tags$li("In the 'Reduced Dataset after variable selection' tab, the user can view the reduced dataset and download it in csv format."),
+                                                tags$li("In the 'Dataset after variable selection' tab, the user can view the reduced dataset and download it in csv format. Note : In this app, if the user is not interested in feature selection step they can directly go to Step 2 i.e. Possible subset of decision trees."),
                                                 br(),
                                                 tags$li("Once the method finishes running, decision tree will appear under the 'Classifier' tab which enables user to view tree with maximum accuracy, minimum gini index and maximum AUROC plus they can download the specified tree in pdf or png format."),
                                                 br(),

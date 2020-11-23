@@ -11,7 +11,6 @@ load("GermanCredit.Rdata")
 data<-GermanCredit
 
 
-
 shinyServer(function(input, output, session){
   
   options(shiny.maxRequestSize=100*1024^2)
@@ -44,9 +43,9 @@ shinyServer(function(input, output, session){
     
     data.frame(
       Name = c("Variable selection method",
-               "No. of Decision Trees"),
+               "No. of Decision Trees","Max. depth of the tree"),
       Value = as.character(c(input$method,
-                             input$trees)),
+                             input$trees,input$max_depth)),
       stringsAsFactors = FALSE)
     
   })
@@ -327,15 +326,15 @@ shinyServer(function(input, output, session){
   
   ######################################################################################
   ######################################################################################
-  ##########  EVOLUTIONARY ALGORITHM ###################################################
+  ########## EVOLUTIONARY ALGORITHM ###################################################
   ######################################################################################
   ######################################################################################
   
   
   
-  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
   #use_python("C:/Users/fredx/Anaconda3",required=T)
-  use_virtualenv("temp_env")
+  #use_virtualenv("temp_env")
   reticulate::source_python("Source_EA.py")
   
   #Parameters
