@@ -21,13 +21,14 @@
   <li><h5> Shrinkage : Fitting a model with all the 'p' predictors and estimated coefficients are shrunken towards zero so known as regularization has the effect of reducing variance. E.g. Lassso or Ridge Regression.</h5></li>
   <h5> When to use them:</h5>
   <ul>
-  <li><h6><strong> Prediction Accuracy:</strong> especially when p>n, to control the variacne.</h6></li>
+  <li><h6><strong> Prediction Accuracy:</strong> especially when p>n, to control the variance.</h6></li>
   <li><h6><strong> Model Interpretability:</strong> To remove irrelevant features, i.e. by setting the corresponding coefficients estimates to zero, we can obtain a model that is more easily interpreted.</h6></li>
   </ul>
   <li><h5>  Multi-collinearity between predictors variables : Identify the idependent variables in a model which are correlated, but to have a more interpretable model, you should avoid features that have a very high (~R² > .8) being contained in the features.</h5></li>
+  Note : In this app, if the user is not interested in feature selection step they can directly go to Step 2 i.e. Possible subset of decision trees. 
 </ul>
   
-<li> <h4><strong> Step2: - Possible subset of decision trees :</strong></h4><h5>After getting the dataset with reduced relevant parameters, different combination of decision trees can be built and applied that to evolutionary algorithm for its computational efficiency.</h5></li>
+<li> <h4><strong> Step2: - Possible subset of decision trees :</strong></h4><h5>After getting the dataset with reduced relevant parameters or original dataset, different combination of decision trees can be built and applied that to evolutionary algorithm for its computational efficiency.</h5></li>
 
 <li> <h4><strong> Step3: - Evolutionary Algorithm :</strong> </h4></li>
 </ol>

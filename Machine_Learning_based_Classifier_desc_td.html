@@ -37,7 +37,7 @@ minimising above subject to the constraint that \( \sum_{j=1}^{p-1} \beta^2_{j} 
  <ul>
    <li> \(\lambda = 0\) : No constraint \(\to\) OLS.</li>
    <li> \(\lambda > 0\): Estimates are biased but more stable than for OLS. </li>
-     <li> Large values results in a large penalty in () and \(\beta_j \to \) 0 \(\forall j\).</li>
+     <li> Large values results in a large penalty in above equation and \(\beta_j \to \) 0 \(\forall j\).</li>
    </ul>  
 </ul>  
 </p>
@@ -47,13 +47,13 @@ minimising above subject to the constraint that \( \sum_{j=1}^{p-1} \beta^2_{j} 
      <ul>
        <li> Lasso regression estimates are found my minimising:</li>
        $$ (Y-X \beta)^T (Y-X \beta) + \lambda \sum_{j=1}^{p-1} |\beta_{j}| $$
-       <p>This is equivalent to minimising (Y - X \(\beta\))\(^T\)(Y - X \(\beta\)) subject to the constraint that \(\sum_{j=1}^{p-1} |\beta_{j}| < c\).The property that lasso shrinks parameters to exactly zero means it can be used for variable selection. More parameters are set to 0 as \(\lambda\) increases.
+       <p>This is equivalent to minimising (Y - X \(\beta\))\(^T\)(Y - X \(\beta\)) subject to the constraint that \(\sum_{j=1}^{p-1} |\beta_{j}| < c\). The property that lasso shrinks parameters to exactly zero means it can be used for variable selection. More parameters are set to 0 as \(\lambda\) increases.
          </p>
          <p>
           <li> Again, large values for \(\beta_j\) are penalised and the estimates are shrunk to exactly 0 for large \(\lambda\).</li>
           <ul> 
           <li> \(\lambda = 0\) : No constraint \(\to\) OLS.</li>
-           <li> \(\lambda = \inf\) : shrinks all parameters to 0.</li>
+           <li> \(\lambda = \infty\) : shrinks all parameters to 0.</li>
             <li> In between, some parameters will be set to zero while some will not.</li>
           </ul>
       </ul> 
