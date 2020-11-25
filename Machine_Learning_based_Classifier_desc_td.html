@@ -22,13 +22,13 @@
  
   <ul>
     <li>For Ordinary Least Sqaures (OLS), we minimises:</li>
-  $$ (Y-X \beta)^T (Y-X \beta) $$
+  $$ (Y-X\beta)^T (Y-X\beta) $$
   </ul>  
   
   <li><h4><strong> Ridge Regression : </strong></h4></li>
    <ul>
   <li> Ridge Regression regularises the coefficients, so that we minimise</li>
-  $$ (Y-X \beta)^T (Y-X \beta) + \lambda \sum_{j=1}^{p-1} \beta^2_{j} $$
+  $$ (Y-X\beta)^T (Y-X\beta) + \lambda \sum_{j=1}^{p-1} \beta^2_{j} $$
   <p>
 minimising above subject to the constraint that \( \sum_{j=1}^{p-1} \beta^2_{j} < c \). This constraint penalises large values for any \( \beta_{j} \) and so shrinks the estimates to 0. It can guide variable selection. Those coefficients that shrink rapidly to 0 as \(\lambda\) increases may be considered candidates for removal from the model.
 </p>
