@@ -19,19 +19,12 @@ library(visNetwork)
 library(ggplot2)
 library(arsenal)
 library(hrbrthemes)
+library(ggrepel)
  # library(profvis) for profiling
-
 
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
-
-# Cleaning the data before using
-#default_data<-Final_Data
-# default_data<-GermanCredit
-# default_data<-australian
-# write.csv(australian,"australian.csv", row.names=FALSE)
-
 
 tree.size <- function(tree) {
   if (is.null(tree)) {
@@ -42,36 +35,33 @@ tree.size <- function(tree) {
 }
 
 # The main function
-Classifier<-function(default_data,choose_regression = "Ridge Regression",selection=100,max_depth = 20){
+Classifier<-function(default_data,choose_regression = TRUE,selection=100){
   
-  # For removing warnings
+  # For remving warnings
   options(warn=-1)
   
-  # Omitting missing data 
+  # Cleaning the data before using
   default_data<-na.omit(default_data)
+  default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
+  
+  # Removing those numerical variables which have correlation between them
+  y=default_data[,1]
+  res<-cor(default_data[sapply(default_data, is.numeric)])
+  default_data <- default_data[,!apply(res,2,function(x) any(x > 0.70|| x< -.70))]
+  
+  fac<-sapply(default_data , is.factor)
+  unclass_fac<-sapply(default_data[,fac], unclass)
+  default_data<-cbind(default_data[,!fac],unclass_fac)
+  
+  default_data<-data.frame(Class=y,default_data)
+  
+  ###################### Applying regressions
+  
+  # Making model.matrix by expanding factors to a set of dummy variables
+  x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
   y=default_data[,1]
   
-  if (choose_regression=="Ridge Regression") {
-    
-    # Cleaning the data before using
-    default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
-    
-    # Removing those numerical variables which have correlation between them
-    y=default_data[,1]
-    res<-cor(default_data[sapply(default_data, is.numeric)])
-    default_data <- default_data[,!apply(res,2,function(x) any(x > 0.70|| x< -.70))]
-    
-    fac<-sapply(default_data , is.factor)
-    unclass_fac<-sapply(default_data[,fac], unclass)
-    default_data<-cbind(default_data[,!fac],unclass_fac)
-    
-    default_data<-data.frame(Class=y,default_data)
-    
-    ###################### Applying regressions
-    
-    # Making model.matrix by expanding factors to a set of dummy variables
-    x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
-    y=default_data[,1]
+  if (choose_regression==0) {
     
     # ~~~~~ Ridge Regression
     cv.out_ridge=cv.glmnet(x,y,alpha=0,family = "binomial")
@@ -83,27 +73,7 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
     default_data<-as.data.frame(x[, tmp_coef_ridge@i[-1]])
     default_data<-data.frame(Class=y,default_data)
   }
-  else if(choose_regression=="Lasso Regression")  {
-    
-    # Cleaning the data before using
-    default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE]<-lapply(default_data[,sapply(default_data, function(x) length(unique(na.omit(x))) <= 2L)==TRUE],factor)
-    
-    # Removing those numerical variables which have correlation between them
-    y=default_data[,1]
-    res<-cor(default_data[sapply(default_data, is.numeric)])
-    default_data <- default_data[,!apply(res,2,function(x) any(x > 0.70|| x< -.70))]
-    
-    fac<-sapply(default_data , is.factor)
-    unclass_fac<-sapply(default_data[,fac], unclass)
-    default_data<-cbind(default_data[,!fac],unclass_fac)
-    
-    default_data<-data.frame(Class=y,default_data)
-    
-    ###################### Applying regressions
-    
-    # Making model.matrix by expanding factors to a set of dummy variables
-    x=model.matrix(default_data[,1]~.,default_data[,-1])[,-1]
-    y=default_data[,1]
+  else {
     
     # ~~~~~ Lasso Regression
     cv.out_lasso=cv.glmnet(x,y,alpha=1,family = "binomial")
@@ -115,9 +85,7 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
     default_data<-as.data.frame(x[, tmp_coef_lasso@i[-1]])
     default_data<-data.frame(Class=y,default_data)
   }
-   else {
-     default_data
-   }
+  
   
   default_data[,1]<-as.factor(default_data[,1])
   
@@ -128,7 +96,9 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   xx<-ifelse(x[,-1] == "1", 0, 1)
   default_data<-data.frame(Class=y,nums,xx)
   
-
+  
+  
+  
   # Checking the labels and changing them into Good and Bad.
   if(levels(default_data[,1])==c("FALSE","TRUE")){
     levels(default_data[,1])[levels(default_data[,1])=="FALSE"] <- "Bad"
@@ -142,8 +112,6 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   }else{
     default_data
   }
-  
-   
   ###################### Decision tree
   
   # You get the names of the columns
@@ -172,11 +140,11 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   train = subset(default_data, sample == TRUE)
   test  = subset(default_data, sample == FALSE)
   
-  # max_depth=10
+  
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:length(Formulas)) { #CHANGE: this is not random
-    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control( maxdepth = max_depth, cp=0.008))
+    RPI = rpart(Formulas[[i]],data= train,method = "class", model=TRUE, y=TRUE,control=rpart.control(minsplit=2, minbucket=1, cp=0.008))
     Forest[[i]] = RPI
   }
   
@@ -269,34 +237,3 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, max_Acc= max_Acc,ind_max_acc=ind_max_acc, Model_Performance=forest_perf, AUROC=forest_AUROC, max_AUROC=max_AUROC,ind_max_AUROC=ind_max_AUROC, Gini_Index= forest_Gini,min_gini=min_gini,ind_min_gini=ind_min_gini)) 
   
 }
-
-# initiate_population <- function(Forest){
-#   bad_trees_count=0
-#   for (Ctree in C$Trees) {
-#     if (tree.size(Ctree) > 1){
-#       bad_trees_count = bad_trees_count+1
-#     }
-#     else{
-#       rules <- tidyRules(Ctree)
-#       #print(rules)
-#       PDT$'insert_r_tree_to_population'(rules)
-#     }
-#   }
-#   for (i in 1:bad_trees_count){
-#     PDT$'generate_random_tree'()
-#   }
-# }
-
-# a<-Classifier(default_data,1,20)
-# rpart.plot(a$Trees[[1]])
-# a$Accuracy[1]
-# a$Gini_Index[[1]]
-# a$AUROC[[1]]
-# a$Model_Performance[[1]]
-# colnames(a$Reduced_data)
-#summary(a$AUROC)
-# summary(a$Gini_Index)
-# a$Accuracy[a$ind_max_Acc]
-# a$Max_Acc
-# rpart.plot(a$Trees[[a$ind_max_Acc]])
-#rpart.plot(Forest[[which.min(forest_Gini)]])
