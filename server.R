@@ -11,7 +11,6 @@ load("GermanCredit.Rdata")
 data<-GermanCredit
 
 
-
 shinyServer(function(input, output, session){
   
   options(shiny.maxRequestSize=100*1024^2)
@@ -44,9 +43,9 @@ shinyServer(function(input, output, session){
     
     data.frame(
       Name = c("Variable selection method",
-               "No. of Decision Trees"),
+               "No. of Decision Trees","Max. depth of the tree"),
       Value = as.character(c(input$method,
-                             input$trees)),
+                             input$trees,input$max_depth)),
       stringsAsFactors = FALSE)
     
   })
@@ -103,6 +102,9 @@ shinyServer(function(input, output, session){
     input$trees
   })
   
+  max_depth<-reactive({
+    input$max_depth
+  })
   
   global <- reactiveValues(response=FALSE)
   global_plot <- reactiveValues(value=TRUE)
@@ -138,7 +140,7 @@ shinyServer(function(input, output, session){
   
   Main<-reactive({
     
-    Classifier(original_data(),  method(),trees())
+    Classifier(original_data(),  method(), trees(), max_depth())
     
   })  
   
@@ -153,8 +155,6 @@ shinyServer(function(input, output, session){
       },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
       
       output$colred <- renderTable({
-        
-        
         colnames(Main()$Reduced_data)
         
       }, caption=paste("Reduced variables in the dataset"),
