@@ -11,6 +11,7 @@ load("GermanCredit.Rdata")
 data<-GermanCredit
 
 
+
 shinyServer(function(input, output, session){
   
   options(shiny.maxRequestSize=100*1024^2)
@@ -43,9 +44,9 @@ shinyServer(function(input, output, session){
     
     data.frame(
       Name = c("Variable selection method",
-               "No. of Decision Trees","Max. depth of the tree"),
+               "No. of Decision Trees"),
       Value = as.character(c(input$method,
-                             input$trees,input$max_depth)),
+                             input$trees)),
       stringsAsFactors = FALSE)
     
   })
@@ -102,9 +103,6 @@ shinyServer(function(input, output, session){
     input$trees
   })
   
-  max_depth<-reactive({
-    input$max_depth
-  })
   
   global <- reactiveValues(response=FALSE)
   global_plot <- reactiveValues(value=TRUE)
@@ -140,7 +138,7 @@ shinyServer(function(input, output, session){
   
   Main<-reactive({
     
-    Classifier(original_data(),  method(), trees(), max_depth())
+    Classifier(original_data(),  method(),trees())
     
   })  
   
@@ -155,6 +153,8 @@ shinyServer(function(input, output, session){
       },options = list(pageLength=10, lengthMenu = c(2,5 ,10, 20, 50,100,500,1000),scrollX = TRUE, paginate = T))
       
       output$colred <- renderTable({
+        
+        
         colnames(Main()$Reduced_data)
         
       }, caption=paste("Reduced variables in the dataset"),
@@ -326,28 +326,33 @@ shinyServer(function(input, output, session){
   
   ######################################################################################
   ######################################################################################
-  ########## EVOLUTIONARY ALGORITHM ###################################################
+  ##########  EVOLUTIONARY ALGORITHM ###################################################
   ######################################################################################
   ######################################################################################
   
   
   
-  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
   #use_python("C:/Users/fredx/Anaconda3",required=T)
-  #use_virtualenv("temp_env")
+  # py_install("numpy")
+  # py_install("pandas")
+  # py_install("statistics")
+  # py_install("pickle")
+  use_virtualenv("temp_env")
   reticulate::source_python("Source_EA.py")
   
   #Parameters
-  available_objectives <- c("accuracy", "nodes", "sensitivity", "specificity") #ordering must be kept
-  to_max <- c(TRUE, FALSE, TRUE, TRUE)
-  initially_included <- c(FALSE, FALSE, FALSE, FALSE)
+  available_objectives <- c("accuracy", "nodes", "gini", "entropy", "max_depth") #ordering must be kept
+  to_max <- c(TRUE, FALSE, FALSE, FALSE, FALSE)
+  initially_included <- c(FALSE, FALSE, FALSE, FALSE, FALSE)
   
   #Initial setup
   PDT <- NULL
   disable("evolve")
+  disable("gini_objective")
+  disable("entropy_objective")
   disable("restart_evolution")
-  nodes_objective_index <- NULL
-  accuracy_objective_index <- NULL
+  #hide("pareto_front")
   max_objectives <- length(available_objectives)
   
   #Reactives
@@ -373,15 +378,22 @@ shinyServer(function(input, output, session){
                                           "Nodes"=integer(),
                                           "accuracy"=double(),
                                           "nodes"=double(),
-                                          "sensitivity"=double(),
-                                          "specificity"=double()) #there should be a way to add the column names from the available_objectives variable
+                                          "gini"=double(),
+                                          "entropy"=double(),
+                                          "max_depth"=integer()) #there should be a way to add the column names from the available_objectives variable
   reactive_variables$crucial_values_df <- NULL
   
   ########################
   # Functions ############
   
+  get_best_tree <- function(){
+    #Returns the best tree, the first objective has priority
+    best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
+    return(best_tree)
+  }
+  
   update_reactive_variables <- function(){
-    current_generation <- PDT$'current_generation'
+    current_generation <- PDT$'generation'
     
     #Update the individuals
     individual_counter <- 0
@@ -423,7 +435,7 @@ shinyServer(function(input, output, session){
   
   update_inclusion_of_objectives <- function(){
     #adds and removes objectives according to their corresponding checkboxes
-    reactive_variables$objectives$Included <- c(input$accuracy_checkbox, input$nodes_checkbox, input$sensitivity_checkbox, input$specificity_checkbox)
+    reactive_variables$objectives$Included <- c(input$accuracy_objective, input$nodes_objective, input$gini_objective, input$entropy_objective, input$max_depth_objective)
     for (row in 1:nrow(reactive_variables$objectives)) {
       if (reactive_variables$objectives[row,"Included"] == TRUE){
         PDT$'add_objective'(objective_name = reactive_variables$objectives[row, "Objective_name"], to_max = reactive_variables$objectives[row, "To_max"])
@@ -443,9 +455,9 @@ shinyServer(function(input, output, session){
                     elitism_rate = input$elitism_rate,
                     hall_of_fame_size = input$elitism_rate,
                     max_depth = input$max_depth_value,
-                    min_depth = input$min_depth_value,
                     max_nodes = input$max_nodes_value,
-                    max_nodes = input$min_nodes_value
+                    population_size = input$population_size,
+                    forced_full = input$forced_full
                     )
     
     #Create a reference to the dataset in the EA, create attribute objects for each
@@ -472,9 +484,10 @@ shinyServer(function(input, output, session){
     }
     
     update_inclusion_of_objectives()
-    
-    nodes_objective_index <<- 1
-    accuracy_objective_index <<- 0
+    update_crucial_values()
+  }
+  
+  update_crucial_values <- function(){
     names <- PDT$'get_attribute_names'()
     values <- PDT$'get_crucial_values'()
     len <- sapply(values,length)
@@ -488,18 +501,83 @@ shinyServer(function(input, output, session){
   update_default_rates <- function(){
     objectives = 0
     if (input$accuracy_objective == TRUE) objectives <- objectives + 1
+    if (input$entropy_objective == TRUE) objectives <- objectives + 1
+    if (input$gini_objective == TRUE) objectives <- objectives + 1
     if (input$nodes_objective == TRUE) objectives <- objectives + 1
+    if (input$max_depth_objective == TRUE) objectives <- objectives + 1
     if (objectives == 1){
-      updateNumericInput(session, "mutation_rate", value = 0.5)
-      updateNumericInput(session, "crossover_rate", value = 0.4)
-      updateNumericInput(session, "elitism_rate", value = 0.1)
+      if (input$forced_full == TRUE){
+        updateNumericInput(session, "mutation_rate", value = 0.3) #Full subtree mutation
+        updateNumericInput(session, "crossover_rate", value = 0.6)
+        updateNumericInput(session, "elitism_rate", value = 0.1)
+        updateNumericInput(session, "posterior_mutation_probability", value = 0.05)
+      } else{
+        updateNumericInput(session, "mutation_rate", value = 0.5) #Subtree mutation
+        updateNumericInput(session, "crossover_rate", value = 0.4)
+        updateNumericInput(session, "elitism_rate", value = 0.1)
+        updateNumericInput(session, "posterior_mutation_probability", value = 0)
+      }
     } else{
       updateNumericInput(session, "mutation_rate", value = 0.6)
       updateNumericInput(session, "crossover_rate", value = 0.4)
       updateNumericInput(session, "elitism_rate", value = 0.0)
+      updateNumericInput(session, "posterior_mutation_probability", value = 0)
     }
   }
   
+  grant_sum_1 <- function(changed){
+    if (changed == "mutation_rate"){
+      mut_rate <- input$mutation_rate
+      cross_rate <- 1 - mut_rate - input$elitism_rate
+      elit_rate <- input$elitism_rate
+      if (cross_rate < 0){
+        elit_rate <- elit_rate + cross_rate
+        cross_rate <- 0
+      }
+    }
+    if (changed == "crossover_rate"){
+      cross_rate <- input$crossover_rate
+      mut_rate <- 1 - cross_rate - input$elitism_rate
+      elit_rate <- input$elitism_rate
+      if (mut_rate < 0){
+        elit_rate <- elit_rate + mut_rate
+        mut_rate <- 0
+      }
+    }
+    if (changed == "elitism_rate"){
+      elit_rate <- input$elitism_rate
+      cross_rate <- 1 - elit_rate - input$mutation_rate
+      mut_rate <- input$mutation_rate
+      if (cross_rate < 0){
+        mut_rate <- mut_rate + cross_rate
+        cross_rate <- 0
+      }
+    }
+    updateNumericInput(session, "mutation_rate", value = mut_rate)
+    updateNumericInput(session, "crossover_rate", value = cross_rate)
+    updateNumericInput(session, "elitism_rate", value = elit_rate)
+  }
+  
+  toggle_objective_checkboxes <- function(){
+    if ((input$accuracy_objective == FALSE) & (input$gini_objective == FALSE) & (input$entropy_objective == FALSE)){
+      enable("accuracy_objective")
+      enable("gini_objective")
+      enable("entropy_objective")
+    } else{
+      if (input$accuracy_objective == TRUE){
+        disable("gini_objective")
+        disable("entropy_objective")
+      }
+      if (input$gini_objective == TRUE){
+        disable("accuracy_objective")
+        disable("entropy_objective")
+      }
+      if (input$entropy_objective == TRUE){
+        disable("gini_objective")
+        disable("accuracy_objective")
+      }
+    }
+  }
   
   
   ######################
@@ -520,13 +598,20 @@ shinyServer(function(input, output, session){
   })
   
   
-  # observeEvent(input$remove_split,{
-  #   print(paste0(input$crucial_values_cells_selected))
-  #   for (selected_cell in input$crucial_values_cells_selected){
-  #     attribute_name <- colnames()
-  #   }
-  #   
-  # })
+  observeEvent(input$remove_split,{
+    print(paste0(input$crucial_values_cells_selected))
+    for (i in seq(1, length(input$crucial_values_cells_selected), by=2)){
+      col <- input$crucial_values_cells_selected[[i]]
+      row <- input$crucial_values_cells_selected[[i+1]]
+      value <- reactive_variables$crucial_values_df[row,col]
+      attribute_name <- colnames(reactive_variables$crucial_values_df)[[row]]
+      attribute_index <- col - 1
+      print(paste0("Removing value ",value," from attribute ",attribute_name,", at index ",attribute_index))
+      PDT$'remove_crucial_value'(attribute_index=attribute_index,value=value)
+      update_crucial_values()
+    }
+
+  })
   
   
   observeEvent(input$initiate_gp, {
@@ -541,14 +626,13 @@ shinyServer(function(input, output, session){
   
   observeEvent(input$restart_evolution, { #Needs a lot of work
     PDT$'restart_evolution'()
-    
+    initiate_gp(forest = Main()$Trees, dataset = Main()$Train_data)
   })
   
  mynetwork<-reactive({
    input$update_tree
    PDT$'evaluate_population'()
-   best_tree <- PDT$'get_best_individual'(objective_index=0)$'genotype'
-   best_tree <- best_tree$'clean_and_reduce'()
+   best_tree <- get_best_tree()
    best_tree_nodes <- best_tree$'get_subtree_nodes'()
    connections <- best_tree$'get_connections'()
    connections
@@ -583,8 +667,7 @@ shinyServer(function(input, output, session){
      i=i+1
    }
    #new_df
-   net<-visNetwork(new_df, new_edges, height = "500px", width = "100%")%>% 
-     visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>% 
+   net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
      visEdges(arrows = "from") %>% 
      visHierarchicalLayout() 
  })
@@ -610,21 +693,49 @@ mynetwork()
     
   observeEvent(input$max_nodes_enabled, {toggle("max_nodes_value")})
   
-  observeEvent(input$min_nodes_enabled, {toggle("min_nodes_value")})
-  
   observeEvent(input$max_depth_enabled, {toggle("max_depth_value")})
   
-  observeEvent(input$min_depth_enabled, {toggle("min_depth_value")})
+  observeEvent(input$accuracy_objective, {
+    update_default_rates()
+    toggle_objective_checkboxes()
+    })
   
-  observeEvent(input$accuracy_objective, {update_default_rates()})
-  
-  observeEvent(input$nodes_objective, {update_default_rates()})
-  
-  observeEvent(input$population_size,{
-    updateNumericInput(session, "tournament_size", max = input$population_size - 1)
+  observeEvent(input$entropy_objective, {
+    update_default_rates()
+    toggle_objective_checkboxes()
   })
   
+  observeEvent(input$gini_objective, {
+    update_default_rates()
+    toggle_objective_checkboxes()
+  })
   
+  observeEvent(input$nodes_objective, {
+    update_default_rates()
+    updateCheckboxInput(session, "forced_full", value = FALSE)
+    })
+  
+  observeEvent(input$max_depth_objective, {
+    update_default_rates()
+    updateCheckboxInput(session, "forced_full", value = FALSE)
+    })
+  
+  observeEvent(input$population_size, {updateNumericInput(session, "tournament_size", max = input$population_size - 1)})
+  
+  observeEvent(input$save_tree_python, {PDT$'save_tree'(get_best_tree())})
+  
+  observeEvent(input$forced_full, {
+    update_default_rates()
+    updateCheckboxInput(session, "max_depth_enabled", value = TRUE)
+    updateCheckboxInput(session, "max_depth_objective", value = FALSE)
+    updateCheckboxInput(session, "nodes_objective", value = FALSE)
+    })
+  
+  observeEvent(input$mutation_rate, {grant_sum_1(changed="mutation_rate")})
+  
+  observeEvent(input$crossover_rate, {grant_sum_1(changed="crossover_rate")})
+  
+  observeEvent(input$elitism_rate, {grant_sum_1(changed="elitism_rate")})
   
   ########################
   # Outputs ##############
@@ -655,9 +766,16 @@ mynetwork()
   output$pareto_front <- renderPlot({
     current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
     current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
-    ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + 
+    ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + #CHANGE HARDCODED MISSING
       geom_point(size=6) +
-      theme_ipsum()
+      #theme_ipsum() + 
+      geom_label_repel(aes(label = Individual_index),
+                                box.padding   = 0.35, 
+                                point.padding = 0.5,
+                                segment.color = 'grey50') +
+      theme_classic()
+    
+    #text(dist ~speed, labels=rownames(cars),data=cars, cex=0.9, font=2)
   })
   
   output$crucial_values <- renderDT({reactive_variables$crucial_values_df %>% datatable(selection=list(target="cell"),

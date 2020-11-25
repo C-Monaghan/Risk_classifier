@@ -24,7 +24,8 @@ shinyUI(ui = tagList(
     theme = shinytheme("flatly"),  # <--- To use a theme, uncomment this
     strong("MI based classifier"), # Main title name
     
-
+    
+    
     # Home --------------------------------------------------------------------
     tabPanel("Home",
              column(12, align="center",
@@ -65,7 +66,6 @@ shinyUI(ui = tagList(
                                                                                                                            icon = icon("question"), size = "extra-small")),
                                                                                  multiple = F, accept = c("text/csv", "text/comma-separated-values, text/plain", ".csv"),
                                                                                  placeholder = "Enter Your Data Here"),
-                                                                       
                                                                        bsPopover("main_data_tooltip", title="File format",
                                                                                  content="Please make sure: rows are customers/observations, columns are different variables with first column specifying the variable to be estimated.",
                                                                                  trigger = "hover"),
@@ -106,27 +106,14 @@ shinyUI(ui = tagList(
                                                       conditionalPanel(condition="input.tabs=='specification'",
                                                                        
                                                                        h4("Please Select Input Values:",align="centre"),
-                                                                       
                                                                        # Input: Variable Selection Method ----
-                                                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression"," Neither (Original Dataset)"),selected = "Ridge Regression"),
+                                                                       radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Lasso Regression","Ridge Regression"),selected = "Lasso Regression"),
                                                                        
-                                                                       h4("Constraints while building decision trees"),
                                                                        
                                                                        # Input: No. of Decision Trees ----
                                                                        sliderInput("trees", "Step 2: How many Decision Trees user wants to select for Evolutionary Algorithm?",
                                                                                    min = 20, max=800,
-                                                                                   step = 4,animate = TRUE,value = 100), 
-                                                                       
-                                                                       # Input: Constraints while building decision tree ----
-          
-                                                                       
-                                                                       sliderInput("max_depth", "Max. depth of the tree",
-                                                                                   min = 1, max=30,
-                                                                                   step = 1,animate = TRUE,value = 10)
-                                                                       
-                                                                       
-                                                                       
-                                                                      
+                                                                                   step = 4,animate = TRUE,value = 100),
                                                       ),
                                                       conditionalPanel(condition="input.tabs=='plot'",
                                                                        
@@ -136,8 +123,8 @@ shinyUI(ui = tagList(
                                                                                                                                                                               'Max. AUROC'),choiceValues = c('ind_max_acc','ind_min_gini','ind_max_AUROC'),selected = 'ind_max_acc'),
                                                                        
                                                                        # Downloading the file type
-                                                                                
-                                                                       radioButtons("filetype","3.Select the type of plot to be downloaded ",choices = list("png","pdf"),selected = "pdf"),
+                                                                       h5("3.Select the type of plot to be downloaded:",align="centre"),          
+                                                                       radioButtons("filetype","Select the file type",choices = list("png","pdf"),selected = "pdf"),
                                                                        actionButton("return_parameter_button", "Return to Method Specification",
                                                                                     width = "100%", class = "btn-default")
                                                       ),
@@ -145,7 +132,6 @@ shinyUI(ui = tagList(
     ),  # Main panel for displaying outputs ----
     mainPanel(width = 9, id = "main_layout",
               tabsetPanel(id = "tabs",  selected = "steps",
-                          
                           tabPanel("Quick Start", value = "steps",
                                    column(width = 5, offset = 0.5,
                                           br(),
@@ -157,7 +143,7 @@ shinyUI(ui = tagList(
                                                 br(),
                                                 tags$li("Specify the method and its parameters to be selected in the 'Method Specification' tab and after that click 'Calculate' button for the method to run."),
                                                 br(),
-                                                tags$li("In the 'Dataset after variable selection' tab, the user can view the reduced dataset and download it in csv format. Note : In this app, if the user is not interested in feature selection step they can directly go to Step 2 i.e. Possible subset of decision trees."),
+                                                tags$li("In the 'Reduced Dataset after variable selection' tab, the user can view the reduced dataset and download it in csv format."),
                                                 br(),
                                                 tags$li("Once the method finishes running, decision tree will appear under the 'Classifier' tab which enables user to view tree with maximum accuracy, minimum gini index and maximum AUROC plus they can download the specified tree in pdf or png format."),
                                                 br(),
@@ -178,8 +164,8 @@ shinyUI(ui = tagList(
                                    )),
                           tabPanel(" View Dataset ", value = "data",dataTableOutput("dataset"),tableOutput("col")),
                           tabPanel("Method Specification", value="specification",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
-                          tabPanel("Dataset after variable selection",value="download",dataTableOutput("Reduced_data"), tableOutput("colred")),
-                          tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Show desired plot button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
+                          tabPanel("Reduced Dataset after variable selection",value="download",dataTableOutput("Reduced_data"), tableOutput("colred")),
+                          tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Calculate button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
               )
     )
     ),
@@ -197,12 +183,10 @@ shinyUI(ui = tagList(
                           conditionalPanel(condition="input.EA_tabs=='evolve'",
                                            sliderInput("generations","Generations",min = 5,max=100,step = 5,animate = TRUE,value = 10),
                                             actionButton("evolve","Evolve") ,
-                                            actionButton("restart_evolution","Restart evoution"),
-                                            checkboxInput("accuracy_checkbox", "Accuracy", value = TRUE, width = NULL),
-                                            checkboxInput("nodes_checkbox", "Nodes", value = TRUE, width = NULL),
-                                            checkboxInput("sensitivity_checkbox", "Sensitivity", value = FALSE, width = NULL),
-                                            checkboxInput("specificity_checkbox", "Specificity", value = FALSE, width = NULL)),
+                                            actionButton("restart_evolution","Restart evoution")),
                           conditionalPanel(condition="input.EA_tabs=='tree'",
+                                           actionButton("update_tree","View best tree"),
+                                           #actionButton("clean_and_reduce","Clean and reduce tree"),
                                            actionButton("save_tree_python","Save current best tree"),
                                             actionButton("load_tree_python","Load tree"),
                                             downloadButton(outputId="net",label ="Download the tree in .html"))
@@ -212,7 +196,30 @@ shinyUI(ui = tagList(
                                              h4("Functions to optimise"),
                                              wellPanel(
                                                checkboxInput("accuracy_objective", "Accuracy", value = TRUE, width = NULL),
-                                               checkboxInput("nodes_objective", "Size", value = TRUE, width = NULL)
+                                               checkboxInput("entropy_objective", "Entropy", value = FALSE, width = NULL),
+                                               checkboxInput("gini_objective", "Gini", value = FALSE, width = NULL),
+                                               checkboxInput("nodes_objective", "Splits", value = FALSE, width = NULL),
+                                               checkboxInput("max_depth_objective", "Max depth", value = FALSE, width = NULL)
+                                             ),
+                                             h4("Constraints of the decision tree output"),
+                                             wellPanel(
+                                               fluidRow(
+                                                 column(2,
+                                                        checkboxInput("max_nodes_enabled", "Max splits", value = FALSE, width = NULL)
+                                                 ),
+                                                 column(3,
+                                                        numericInput("max_nodes_value", "", 999)
+                                                 )
+                                               ),
+                                               fluidRow(
+                                                 column(2,
+                                                        checkboxInput("max_depth_enabled", "Max depth", value = FALSE, width = NULL)
+                                                 ),
+                                                 column(3,
+                                                        numericInput("max_depth_value", "", 999)
+                                                 )
+                                               ),
+                                               checkboxInput("forced_full", "Force trees to fill the max depth", value = FALSE, width = NULL)
                                              ),
                                              h4("Genetic Program parameters"),
                                              wellPanel(
@@ -223,42 +230,8 @@ shinyUI(ui = tagList(
                                                         numericInput("halloffame_size", "Hall of fame size", value=5, min=1, max=20, step=1),
                                                         numericInput("mutation_rate", "Mutation rate", value=0.6, min=0, max=1, step=0.05),
                                                         numericInput("crossover_rate", "Crossover rate", value=0.4, min=0, max=1, step=0.05),
+                                                        numericInput("posterior_mutation_probability", "Posterior mutation probability", value=0.05, min=0, max=0.2, step=0.01),
                                                         numericInput("elitism_rate", "Elitism rate", value=0.4, min=0, max=1, step=0.05)
-                                                 )
-                                               )
-                                             ),
-                                             h4("Constraints of the decision tree output"),
-                                             wellPanel(
-                                               fluidRow(
-                                                column(2,
-                                                  checkboxInput("max_nodes_enabled", "Max splits", value = FALSE, width = NULL)
-                                                  ),
-                                                column(3,
-                                                  numericInput("max_nodes_value", "", 999)
-                                                  )
-                                                ),
-                                               fluidRow(
-                                                 column(2,
-                                                        checkboxInput("max_depth_enabled", "Max depth", value = FALSE, width = NULL)
-                                                 ),
-                                                 column(3,
-                                                        numericInput("max_depth_value", "", 999)
-                                                 )
-                                               ),
-                                               fluidRow(
-                                                 column(2,
-                                                        checkboxInput("min_nodes_enabled", "Min splits", value = FALSE, width = NULL)
-                                                 ),
-                                                 column(3,
-                                                        numericInput("min_nodes_value", "", 1)
-                                                 )
-                                               ),
-                                               fluidRow(
-                                                 column(2,
-                                                        checkboxInput("min_depth_enabled", "Min depth", value = FALSE, width = NULL)
-                                                 ),
-                                                 column(3,
-                                                        numericInput("min_depth_value", "", 1)
                                                  )
                                                )
                                              )
@@ -272,8 +245,6 @@ shinyUI(ui = tagList(
                                              plotOutput("evolution_progress"),
                                              plotOutput("evolution_progress_nodes")),
                                     tabPanel("View trees", value="tree",
-                                             actionButton("update_tree",
-                                                          "View best tree"),
                                              visNetworkOutput("network", height = "800px", width = "800px"),
                                              DTOutput("tree_partitions"))
                                     )
