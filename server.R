@@ -603,6 +603,9 @@ shinyServer(function(input, output, session){
     for (i in seq(1, length(input$crucial_values_cells_selected), by=2)){
       col <- input$crucial_values_cells_selected[[i]]
       row <- input$crucial_values_cells_selected[[i+1]]
+      print(paste0("i",i))
+      print(paste0("col",col))
+      print(paste0("row",row))
       value <- reactive_variables$crucial_values_df[row,col]
       attribute_name <- colnames(reactive_variables$crucial_values_df)[[row]]
       attribute_index <- col - 1
