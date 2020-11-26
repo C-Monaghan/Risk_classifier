@@ -485,6 +485,7 @@ shinyServer(function(input, output, session){
     
     update_inclusion_of_objectives()
     update_crucial_values()
+    plot_crucial_values()
   }
   
   update_crucial_values <- function(){
@@ -599,21 +600,20 @@ shinyServer(function(input, output, session){
   
   
   observeEvent(input$remove_split,{
-    print(paste0(input$crucial_values_cells_selected))
-    for (i in seq(1, length(input$crucial_values_cells_selected), by=2)){
-      col <- input$crucial_values_cells_selected[[i]]
-      row <- input$crucial_values_cells_selected[[i+1]]
-      print(paste0("i",i))
-      print(paste0("col",col))
-      print(paste0("row",row))
-      value <- reactive_variables$crucial_values_df[row,col]
-      attribute_name <- colnames(reactive_variables$crucial_values_df)[[row]]
-      attribute_index <- col - 1
-      print(paste0("Removing value ",value," from attribute ",attribute_name,", at index ",attribute_index))
-      PDT$'remove_crucial_value'(attribute_index=attribute_index,value=value)
-      update_crucial_values()
+    selection <- input$crucial_values_cells_selected
+    values <- reactive_variables$crucial_values_df[selection]
+    attribute_indexes <- selection[,2]
+    all_attribute_names <- colnames(reactive_variables$crucial_values_df)
+    attribute_names <- all_attribute_names[attribute_indexes]
+    print(paste0("values", values))
+    print(paste0("attribute_names", attribute_names))
+    for(i in 1:nrow(selection)){
+      value <- as.numeric(values[i])
+      attribute_name <- attribute_names[i]
+      PDT$'remove_crucial_value'(attribute_name=attribute_name,value=value)
     }
-
+    update_crucial_values()
+    plot_crucial_values()
   })
   
   
@@ -781,6 +781,11 @@ mynetwork()
     #text(dist ~speed, labels=rownames(cars),data=cars, cex=0.9, font=2)
   })
   
+  dt_crucial_values <- function(){
+    
+  }
+  
+  plot_crucial_values <- function(){
   output$crucial_values <- renderDT({reactive_variables$crucial_values_df %>% datatable(selection=list(target="cell"),
                                     options = list(scrollX = TRUE,
                                                    #scrolly = TRUE,
@@ -791,6 +796,7 @@ mynetwork()
                                                      "function(settings, json) {",
                                                      "$(this.api().table().header()).css({'color': '#000'});","}")
                                     )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
-  })
+  })}
   
 })
+

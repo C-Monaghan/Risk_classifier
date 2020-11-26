@@ -5,7 +5,7 @@ library(reticulate)
 load("GermanCredit.Rdata")
 data<-GermanCredit
 
-C <- Classifier(data, TRUE, 100)
+C <- Classifier(data, choose_regression = "Ridge Regression", 100)
 forest <- C$Trees
 dataset <- C$Train_data
 
@@ -17,8 +17,8 @@ crucial_values_df <- NULL
 
 update_inclusion_of_objectives <- function(){
   PDT$'add_objective'(objective_name = "entropy", to_max = FALSE)
-  PDT$'add_objective'(objective_name = "max_depth", to_max = FALSE)
-  PDT$'add_objective'(objective_name = "nodes", to_max = FALSE)
+  #PDT$'add_objective'(objective_name = "max_depth", to_max = FALSE)
+  #PDT$'add_objective'(objective_name = "nodes", to_max = FALSE)
 }
 
 view_tree <- function(individual=NULL, best_tree = NULL){
@@ -68,9 +68,10 @@ PDT <<- DecisionTree_EA(tournament_size = 5,
                         mutation_rate = 0.5,
                         elitism_rate = 0.1,
                         hall_of_fame_size = 5,
-                        max_depth = 15,
+                        max_depth = 6,
                         population_size = 100,
-                        uniform_mutation_rate = 0.05
+                        uniform_mutation_rate = 0.05,
+                        forced_full = TRUE
 )
 
 #Create a reference to the dataset in the EA, create attribute objects for each
@@ -97,6 +98,23 @@ for (i in 1:bad_trees_count){
   PDT$'insert_tree_to_population'(random_tree)
 }
 
+show_dups <- function(){
+  dups <- 0
+  for (ind in PDT$population){
+    if(ind$duplicated==TRUE){
+      dups <- dups+1}
+  }
+  print(paste0("dups: ",dups))
+}
+show_objective_values <- function(pop = NULL){
+  if (is.null(pop)){
+    pop = PDT$population
+  }
+  for (ind in pop){
+    print(paste0(ind$objective_values))
+  }
+}
+
 update_inclusion_of_objectives()
 
 names <- PDT$'get_attribute_names'()
@@ -107,21 +125,27 @@ len <- m_l - len
 crucial_values <- data.frame(mapply( function(x,y) c( x , rep( NA , y ) ) , values , len ))
 colnames(crucial_values) <- names
 crucial_values_df <<- crucial_values
-# head(crucial_values_df)
-# colnames(crucial_values_df)
-# match("Duration",colnames(crucial_values_df))
-# head(crucial_values_df[,2])
 
-#PDT$'evaluate_population'()
-#PDT$'_fast_nondominated_sort'()
-#PDT$population_size
-length(PDT$population)
-length(C$Trees)
-PDT$'max_depth'
-PDT$'population_size'
+
+
 PDT$'evolve'()
 PDT$'evolve'()
 PDT$'evolve'()
+show_dups()
+show_objective_values()
+best_ind <- PDT$'get_best_individual'(objective_index=0)
+best_ind$genotype$get_max_depth()
+best_ind$genotype$get_min_depth()
+view_tree(best_ind)
+
+show_objective_values(PDT$"_sort_individuals"())
+sorted_ind <- PDT$'_multiobjective_sort_individuals'()
+for (ind in sorted_ind){
+  print(paste0(ind$rank, " ", ind$crowding_distance, " ", ind$objective_values))
+}
+
+
+
 best_ind <- PDT$'get_best_individual'(objective_index=0)
 best_ind <-  PDT$'population'[[86]]
 best_ind$'objective_values'
@@ -166,6 +190,7 @@ reduced = PDT$'shrink_useless_nodes'(PDT$'population'[[86]]$'genotype')
 view_tree(tree=reduced)
 
 x = data.frame("a"=c(1,2,3),"b"=c(4,5,6))
+x
 x[1,2]
 colnames(x)[[1]]
 
@@ -180,3 +205,15 @@ best_ind <-  PDT$'population'[[86]]
 view_tree(best_ind)
 mutated <- PDT$'_subtree_mutation'(best_ind)
 view_tree(mutated)
+
+m <- matrix(1:9, nrow = 3, ncol = 3)
+s <- m[,2]
+s
+for (r in 1:nrow(m)){
+  print(r)
+}
+print(m)
+typeof(m)
+x <- c(1,2,4,8,9,7,6,4)
+c<-x[s]
+c
