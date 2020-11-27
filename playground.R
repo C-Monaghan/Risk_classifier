@@ -30,28 +30,31 @@ view_tree <- function(individual=NULL, best_tree = NULL){
   c_to <- connections[[2]]
   c_color <- connections[[3]]
   new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
-  new_df <- data.frame(id=c(),label=c(), shape=c())
+  new_df <- data.frame(id=c(),label=c(), shape=c(), level=c())
   i=0
   for (node in best_tree_nodes){
+    level = node$'get_my_depth'()
     label = (toString(node))
     color="lightblue"
     font_color = "black"
     if (node$'is_terminal'() == TRUE){
-      shape="square"
+      shape="box"
+      color="lightgreen"
     }
     else{
       if (node$'is_root'()){
-        shape="triangle"
-        color="blue"
+        shape="box"
+        color="lightgreen"
       }
       else{
-        shape="triangle"
+        shape="box"
       }
     }
     
     new_df <- rbind(new_df, data.frame(id=i,
                                        label=label, 
                                        shape=shape,
+                                       level = level,
                                        color=color,
                                        font.color = font_color))
     i=i+1
@@ -67,10 +70,10 @@ PDT <<- DecisionTree_EA(tournament_size = 5,
                         crossover_rate = 0.4,
                         mutation_rate = 0.5,
                         elitism_rate = 0.1,
-                        hall_of_fame_size = 5,
+                        #hall_of_fame_size = 5,
                         max_depth = 6,
                         population_size = 100,
-                        uniform_mutation_rate = 0.05,
+                        uniform_mutation_rate = 0,
                         forced_full = TRUE
 )
 
@@ -114,6 +117,11 @@ show_objective_values <- function(pop = NULL){
     print(paste0(ind$objective_values))
   }
 }
+show_depths <- function(){
+  for (ind in PDT$population){
+    print(paste("Max",ind$'genotype'$'get_max_depth'(),ind$'max_depth',"Min",ind$'genotype'$'get_min_depth'()))
+  }
+}
 
 update_inclusion_of_objectives()
 
@@ -127,17 +135,31 @@ colnames(crucial_values) <- names
 crucial_values_df <<- crucial_values
 
 
-
+PDT$'_ensure_population_quality'()
+PDT$'evaluate_population'()
+PDT$'_fast_nondominated_sort'()
+length(PDT$population)
+PDT$generation
+show_depths()
 PDT$'evolve'()
 PDT$'evolve'()
 PDT$'evolve'()
 show_dups()
 show_objective_values()
 best_ind <- PDT$'get_best_individual'(objective_index=0)
+best_ind <- PDT$'population'[[2]]
+new_ind <- PDT$generate_random_individual()
+best_ind$generation_of_creation
 best_ind$genotype$get_max_depth()
 best_ind$genotype$get_min_depth()
+PDT$meets_constraints(best_ind)
+PDT$calculate_max_depth(best_ind)
+best_ind$genotype$get_min_depth()
 view_tree(best_ind)
-
+view_tree(new_ind)
+PDT$forced_full
+best_ind$meets_constraints
+best_ind$meets_constraints <- NULL
 show_objective_values(PDT$"_sort_individuals"())
 sorted_ind <- PDT$'_multiobjective_sort_individuals'()
 for (ind in sorted_ind){
