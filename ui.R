@@ -29,8 +29,8 @@ shinyUI(ui = tagList(
              column(12, align="center",
                     # img(src='logo.png', align = "right", height=120, width=100),
                     h2(strong("Welcome to the Shiny App for using MI based classifier in R")),
-                    tags$img(src = "classifier.png",height=500,width=550),
-                    h4(strong("Note: For more help on usage, please look into the 'Guide' tab and 'About us' in detail.")),
+                    tags$img(src = "logo.jpg",height=300,width=1000),
+                    h4(strong("Note: For more help on usage, please look into the 'Guides' tab and 'About us' in detail.")),
                     
              )
     ),
@@ -55,7 +55,7 @@ shinyUI(ui = tagList(
     ),
     
     # Dataset Input ----------------------------------------------------------------
-    tabPanel("Dataset", conditionalPanel(condition="input.tabs!='steps'",
+    tabPanel("Decision Tree", conditionalPanel(condition="input.tabs!='steps'",
                                          sidebarPanel(width = 3,
                                                       conditionalPanel(condition="input.tabs=='data'",
                                                                        textOutput("arg"),
