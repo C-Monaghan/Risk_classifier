@@ -352,8 +352,10 @@ shinyServer(function(input, output, session){
   disable("gini_objective")
   disable("entropy_objective")
   disable("restart_evolution")
+  #disable("index_tree")
   #hide("pareto_front")
   max_objectives <- length(available_objectives)
+  
   
   #Reactives
   reactive_variables <- reactiveValues()
@@ -382,6 +384,7 @@ shinyServer(function(input, output, session){
                                           "entropy"=double(),
                                           "max_depth"=integer()) #there should be a way to add the column names from the available_objectives variable
   reactive_variables$crucial_values_df <- NULL
+  reactive_variables$view_by_index <- FALSE
   
   ########################
   # Functions ############
@@ -453,7 +456,7 @@ shinyServer(function(input, output, session){
                     crossover_rate = input$crossover_rate,
                     mutation_rate = input$mutation_rate,
                     elitism_rate = input$elitism_rate,
-                    hall_of_fame_size = input$elitism_rate,
+                    #hall_of_fame_size = input$elitism_rate,
                     max_depth = input$max_depth_value,
                     max_nodes = input$max_nodes_value,
                     population_size = input$population_size,
@@ -580,6 +583,16 @@ shinyServer(function(input, output, session){
     }
   }
   
+  #~~~~ Download the network decision tree plot
+  output$net<-downloadHandler(
+    #Specify filename
+    filename = function() {
+      paste('network-', Sys.Date(), '.html', sep='')
+    },
+    content = function(con) {
+      mynetwork() %>% visSave(con)
+    }
+  )
   
   ######################
   # Buttons ############
@@ -632,67 +645,15 @@ shinyServer(function(input, output, session){
     initiate_gp(forest = Main()$Trees, dataset = Main()$Train_data)
   })
   
- mynetwork<-reactive({
-   input$update_tree
-   PDT$'evaluate_population'()
-   best_tree <- get_best_tree()
-   best_tree_nodes <- best_tree$'get_subtree_nodes'()
-   connections <- best_tree$'get_connections'()
-   connections
-   c_from <- connections[[1]]
-   c_to <- connections[[2]]
-   c_color <- connections[[3]]
-   new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
-   new_df <- data.frame(id=c(),label=c(), shape=c())
-   i=0
-   for (node in best_tree_nodes){
-     label = (toString(node))
-     color="lightblue"
-     font_color = "black"
-     if (node$'is_terminal'() == TRUE){
-       shape="square"
-     }
-     else{
-       if (node$'is_root'()){
-         shape="triangle"
-         color="blue"
-       }
-       else{
-         shape="triangle"
-       }
-     }
-     
-     new_df <- rbind(new_df, data.frame(id=i,
-                                        label=label, 
-                                        shape=shape,
-                                        color=color,
-                                        font.color = font_color))
-     i=i+1
-   }
-   #new_df
-   net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
-     visEdges(arrows = "from") %>% 
-     visHierarchicalLayout() 
- })
+  
+ mynetwork<-reactive({ visual_tree() })
       
   
   observeEvent(input$update_tree, {
     output$network <- renderVisNetwork({
-      
-mynetwork()
+      mynetwork()
     })
   })
-  
-  #~~~~ Download the network decision tree plot
-  output$net<-downloadHandler(
-    #Specify filename
-    filename = function() {
-      paste('network-', Sys.Date(), '.html', sep='')
-    },
-    content = function(con) {
-      mynetwork() %>% visSave(con)
-    }
-  )
     
   observeEvent(input$max_nodes_enabled, {toggle("max_nodes_value")})
   
@@ -740,8 +701,67 @@ mynetwork()
   
   observeEvent(input$elitism_rate, {grant_sum_1(changed="elitism_rate")})
   
+  observeEvent(input$index_tree, {
+    output$network <- renderVisNetwork({visual_tree(index=input$tree_index)})
+  })
+  
+  
   ########################
   # Outputs ##############
+  
+  visual_tree <- function(index=NULL){
+    PDT$'evaluate_population'()
+    if (is.null(index)){
+      best_tree <- get_best_tree()
+    }
+    else{
+      #ind_index <- input$tree_index+1
+      ind_index <- index+1
+      print(paste("by index: ", ind_index))
+      best_tree <- PDT$'get_tree_by_individual_index'(ind_index)
+    }
+    best_tree_nodes <- best_tree$'get_subtree_nodes'()
+    connections <- best_tree$'get_connections'()
+    connections
+    c_from <- connections[[1]]
+    c_to <- connections[[2]]
+    c_color <- connections[[3]]
+    new_edges <- data.frame(from = c_from, to=c_to, color=c_color)
+    new_df <- data.frame(id=c(),label=c(), shape=c(), level=c())
+    i=0
+    for (node in best_tree_nodes){
+      level = node$'get_my_depth'()
+      label = (toString(node))
+      color="lightblue"
+      font_color = "black"
+      if (node$'is_terminal'() == TRUE){
+        shape="box"
+        color="lightgreen"
+      }
+      else{
+        if (node$'is_root'()){
+          shape="box"
+          color="lightgreen"
+        }
+        else{
+          shape="box"
+        }
+      }
+      
+      new_df <- rbind(new_df, data.frame(id=i,
+                                         label=label, 
+                                         shape=shape,
+                                         level = level,
+                                         color=color,
+                                         font.color = font_color))
+      i=i+1
+    }
+    #new_df
+    net<-visNetwork(new_df, new_edges, height = "500px", width = "100%") %>% 
+      visEdges(arrows = "from") %>% 
+      visHierarchicalLayout()
+    return (net)
+  }
   
   output$evolution_progress <- renderPlot({
     objective_name = "accuracy"
@@ -767,16 +787,28 @@ mynetwork()
   })
   
   output$pareto_front <- renderPlot({
+    
+    #print(paste("filtered_indexes",filtered_indexes))
     current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
     current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
+    obj_names <- PDT$'get_objective_names'()
+    filtered_indexes <- PDT$'get_filtered_individual_indexes'()
+    #if (length(filtered_indexes)!=length(current_gen_pareto)){
+    #  filtered_indexes <- c("0")
+    #}
     ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + #CHANGE HARDCODED MISSING
       geom_point(size=6) +
       #theme_ipsum() + 
-      geom_label_repel(aes(label = Individual_index),
+      #geom_label_repel(aes(label = Individual_index),
+      geom_label_repel(aes(label = filtered_indexes),                 
                                 box.padding   = 0.35, 
                                 point.padding = 0.5,
                                 segment.color = 'grey50') +
-      theme_classic()
+      ggtitle(paste("Population in generation ", PDT$'generation' ) ) +
+      xlab(obj_names[1]) +
+      ylab(obj_names[2]) #+
+      #grids(linetype = "dashed") +
+      #theme_classic()
     
     #text(dist ~speed, labels=rownames(cars),data=cars, cex=0.9, font=2)
   })

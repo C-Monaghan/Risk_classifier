@@ -199,10 +199,12 @@ shinyUI(ui = tagList(
                                             actionButton("restart_evolution","Restart evoution")),
                           conditionalPanel(condition="input.EA_tabs=='tree'",
                                            actionButton("update_tree","View best tree"),
+                                           actionButton("index_tree","View tree by index"),
+                                           numericInput("tree_index", "Tree index", value=0, min=0, max=100, step=1),
                                            #actionButton("clean_and_reduce","Clean and reduce tree"),
-                                           actionButton("save_tree_python","Save current best tree"),
-                                            actionButton("load_tree_python","Load tree"),
-                                            downloadButton(outputId="net",label ="Download the tree in .html"))
+                                           actionButton("save_tree_python","Save tree"),
+                                           actionButton("load_tree_python","Load tree"),
+                                           downloadButton(outputId="net",label ="Download the tree in .html"))
                           ),
               mainPanel(tabsetPanel(id = "EA_tabs",
                                     tabPanel("Setup", value="setup",
@@ -212,7 +214,7 @@ shinyUI(ui = tagList(
                                                checkboxInput("entropy_objective", "Entropy", value = FALSE, width = NULL),
                                                checkboxInput("gini_objective", "Gini", value = FALSE, width = NULL),
                                                checkboxInput("nodes_objective", "Splits", value = FALSE, width = NULL),
-                                               checkboxInput("max_depth_objective", "Max depth", value = FALSE, width = NULL)
+                                               checkboxInput("max_depth_objective", "Max depth", value = TRUE, width = NULL)
                                              ),
                                              h4("Constraints of the decision tree output"),
                                              wellPanel(
@@ -229,7 +231,7 @@ shinyUI(ui = tagList(
                                                         checkboxInput("max_depth_enabled", "Max depth", value = FALSE, width = NULL)
                                                  ),
                                                  column(3,
-                                                        numericInput("max_depth_value", "", 999)
+                                                        numericInput("max_depth_value", "", 15)
                                                  )
                                                ),
                                                checkboxInput("forced_full", "Force trees to fill the max depth", value = FALSE, width = NULL)
@@ -240,7 +242,7 @@ shinyUI(ui = tagList(
                                                  column(3,
                                                         numericInput("population_size", "Population size", value=100, min=20, max=1000, step=5),
                                                         numericInput("tournament_size", "Tournament size", value=5, min=2, max=20, step=1),
-                                                        numericInput("halloffame_size", "Hall of fame size", value=5, min=1, max=20, step=1),
+                                                        #numericInput("halloffame_size", "Hall of fame size", value=5, min=1, max=20, step=1),
                                                         numericInput("mutation_rate", "Mutation rate", value=0.6, min=0, max=1, step=0.05),
                                                         numericInput("crossover_rate", "Crossover rate", value=0.4, min=0, max=1, step=0.05),
                                                         numericInput("posterior_mutation_probability", "Posterior mutation probability", value=0.05, min=0, max=0.2, step=0.01),
