@@ -272,7 +272,7 @@ shinyUI(ui = tagList(
 
 
     # About Us ----------------------------------------------------------------
-    tabPanel("About Us",
+    tabPanel("About Us",tags$img(src = "About.png",height=800,width=1420)
              
              
              
