@@ -307,7 +307,11 @@ class DT_Node:
 		if self.is_terminal():
 			return new_depth
 		else:
-			return min([child.get_max_depth(depth=new_depth) for child in self.children])
+			return min([child.get_min_depth(depth=new_depth) for child in self.children])
+
+	def get_my_depth(self):
+		path = self.get_path()
+		return len(path)
 
 	def node_already_in_branch(self, node=None): #not tested, not currently used
 		if self.parent is None:
@@ -375,7 +379,7 @@ class DecisionTree_EA: #oblique, binary trees
 				crossover_rate = 0.5, 
 				mutation_rate = 0.4, 
 				elitism_rate = 0.1, 
-				hall_of_fame_size = 3,
+				#hall_of_fame_size = 3,
 				max_depth = 999,
 				max_nodes = None,
 				objective_names = [],
@@ -398,7 +402,7 @@ class DecisionTree_EA: #oblique, binary trees
 		self.population_size = int(population_size)
 		self.tournament_size = int(tournament_size)
 		self.archive_population = []
-		self.hall_of_fame_size = int(hall_of_fame_size)
+		#self.hall_of_fame_size = int(hall_of_fame_size)
 		self.hall_of_fame = {} #{objective_index:[ind,ind...]}
 		self.crossover_rate = crossover_rate
 		self.mutation_rate = mutation_rate
@@ -412,6 +416,9 @@ class DecisionTree_EA: #oblique, binary trees
 		self.uniform_mutation_rate = uniform_mutation_rate
 		self.forced_full = forced_full
 		self.subtree_mutation_max_tree_depth = subtree_mutation_max_tree_depth
+		
+		#Initialisation
+		#self.update_forced_balanced_trees()
 		for objective_name in objective_names:
 			self.add_objective(objective_name=objective_name)
 		
@@ -527,6 +534,13 @@ class DecisionTree_EA: #oblique, binary trees
 		self.data = pd.DataFrame(data)
 		self.output_labels = list(labels)
 
+	#def update_forced_balanced_trees(self):
+	#	if self.forced_full:
+	#		self.force_balanced_trees = True
+	#	else:
+	#		if self.
+	#		self.force_balanced_trees = False
+
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self._parse_tree_r(tree)
 		self.insert_tree_to_population(parsed_tree)
@@ -621,6 +635,14 @@ class DecisionTree_EA: #oblique, binary trees
 		at_values = [attribute.crucial_values for attribute in self.attributes.values()]
 		return at_values
 
+	def get_objective_names(self):
+		names = [v.objective_name for k,v in self.objectives.items()]
+		return names
+
+	def get_filtered_individual_indexes(self, rank_threshold = 1):
+		ranks = [ind.rank if not ind.rank is None else 0 for ind in self.population]
+		return [str(i) if rank <= rank_threshold else None for i,rank in enumerate(ranks)]
+
 	def get_best_individual(self, population = None, objective_index = None):
 		if population is None:
 			population = self.population
@@ -645,6 +667,14 @@ class DecisionTree_EA: #oblique, binary trees
 			population = self.population
 		mean = sum([ind.objective_values[int(objective_index)] for ind in self.population])/len(self.population)
 		return mean
+
+	def get_tree_by_individual_index(self, index):
+		index = int(index)
+		if index < self.population_size:
+			ind = self.population[index]
+			tree = ind.genotype
+			return tree
+		return None
 
 	#Genetic operators
 	def _one_point_crossover(self, individual1, individual2):
@@ -803,6 +833,8 @@ class DecisionTree_EA: #oblique, binary trees
 		Generates a random node.
 		The attribute and value are not repeated in the path that links the old_node with the root to avoid redundancy
 		"""
+		if old_node is None:
+			return self.generate_random_node()
 		path = old_node.get_path()
 		path_attributes = list(set([node.attribute for node in path]))
 		#print("Path attributes:",str([at.name for at in path_attributes]))
@@ -868,11 +900,14 @@ class DecisionTree_EA: #oblique, binary trees
 		terminal_node.output_label = rd.choice(list(self.unique_output_labels))
 		return terminal_node
 
-	def generate_random_tree(self,max_depth=6, min_depth=4, current_depth=0, method = "Grow"): #missing adding names (might not be needed)
+	def generate_random_tree(self,max_depth=6, min_depth=4, current_depth=0, method = "Grow", parent=None, safe=True): #missing adding names (might not be needed)
 		if max_depth-1 == current_depth:
 			return self.generate_random_terminal()
 		else:
-			root = self.generate_random_node()
+			if safe:
+				root = self.generate_random_node_safe(old_node=parent)
+			else:
+				root = self.generate_random_node()
 			if method == "Grow":
 				for i in range(2):
 					if current_depth < min_depth:
@@ -882,12 +917,12 @@ class DecisionTree_EA: #oblique, binary trees
 					if need_terminal:
 						child = self.generate_random_terminal()
 					else:
-						child = self.generate_random_tree(max_depth=max_depth, min_depth=min_depth, current_depth=current_depth+1, method = method)
+						child = self.generate_random_tree(max_depth=max_depth, min_depth=min_depth, current_depth=current_depth+1, method = method, parent=root, safe=safe)
 					root.add_child(name=None,child=child)
 					
 			elif method == "Full":
 				for i in range(2):
-					child = self.generate_random_tree(max_depth=max_depth, min_depth=min_depth, current_depth=current_depth+1, method = method)
+					child = self.generate_random_tree(max_depth=max_depth, min_depth=min_depth, current_depth=current_depth+1, method = method, parent=root,safe=safe)
 					root.add_child(name=None,child=child)
 			else:
 				print("Wrong method received in generate_random_tree: ", str(method))
@@ -984,8 +1019,19 @@ class DecisionTree_EA: #oblique, binary trees
 		print("At generation", str(self.generation), " population: missing", missing)
 		if missing > 0:
 			self.population.extend([self.generate_random_individual() for _ in range(missing)])
+			print(str(len(self.population)))
 		elif missing < 0:
 			self.population = self.population[:self.population_size]
+	
+	def initial_setup(self):
+		print("Running initial setup")
+		self._ensure_population_quality()
+		self.evaluate_population()
+		self._fast_nondominated_sort()
+		#Calculate the number of individuals to be generated with each method
+		self.crossovers = int(math.ceil(self.population_size * self.crossover_rate / 2))
+		self.mutations = int(self.population_size * self.mutation_rate)
+		self.elites = int(self.population_size * self.elitism_rate)
 	
 	def _run_generation(self):
 		"""
@@ -994,17 +1040,7 @@ class DecisionTree_EA: #oblique, binary trees
 		"""
 		
 		start_gen = time.time()
-		#self._ensure_population_quality()
-		
-		if self.generation == 0:
-			self._ensure_population_quality()
-			self.evaluate_population()
-			self._fast_nondominated_sort()
-			#Calculate the number of individuals to be generated with each method
-			self.crossovers = int(math.ceil(self.population_size * self.crossover_rate / 2))
-			self.mutations = int(self.population_size * self.mutation_rate)
-			self.elites = int(self.population_size * self.elitism_rate)
-			
+		if self.generation == 0: self.initial_setup()
 		self.generation = self.generation + 1
 		newgen_pop = []
 		
@@ -1180,7 +1216,8 @@ class DecisionTree_EA: #oblique, binary trees
 		start_reduce = time.time()
 		for ind in population:
 			#if ind.rank == 1:
-			self.reduce_and_update(individual=ind)
+			if not self.forced_full:
+				self.reduce_and_update(individual=ind)
 			ind.evaluated_on_static_objectives = True
 		end_reduce = time.time()
 		print("Reduce time ",str(end_reduce-start_reduce))
@@ -1261,8 +1298,6 @@ class DecisionTree_EA: #oblique, binary trees
 					if p.objective_values == q.objective_values:
 						q.duplicated = True
 				
-				
-	
 	def _dominates(self, p, q):
 		equals = 0
 		for objective_index, objective in self.objectives.items():

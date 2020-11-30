@@ -147,8 +147,8 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   # Making combination of columns/variable names with minimum 3 variables
   # selection=100
   minimum_columns <- 3
-  id <- lapply(1:(selection-1),function(i)sample(seq(n),sample(seq(minimum_columns,n))))
-  id[[length(id)+1]] <- seq(n)
+  id <- lapply(1:(selection),function(i)sample(seq(n),sample(seq(minimum_columns,n))))
+  id[[1]] <- seq(n)
   
   
   # You paste them to formulas
