@@ -122,8 +122,30 @@ show_depths <- function(){
     print(paste("Max",ind$'genotype'$'get_max_depth'(),ind$'max_depth',"Min",ind$'genotype'$'get_min_depth'()))
   }
 }
-
-update_inclusion_of_objectives()
+show_pareto <- function(){
+  #print(paste("filtered_indexes",filtered_indexes))
+  current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
+  current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
+  obj_names <- PDT$'get_objective_names'()
+  filtered_indexes <- PDT$'get_filtered_individual_indexes'()
+  #if (length(filtered_indexes)!=length(current_gen_pareto)){
+  #  filtered_indexes <- c("0")
+  #}
+  ggplot(current_gen_pareto, aes(x=accuracy, y=nodes, color=Rank)) + #CHANGE HARDCODED MISSING
+    geom_point(size=6) +
+    #theme_ipsum() + 
+    #geom_label_repel(aes(label = Individual_index),
+    geom_label_repel(aes(label = filtered_indexes),                 
+                     box.padding   = 0.35, 
+                     point.padding = 0.5,
+                     segment.color = 'grey50') +
+    ggtitle(paste("Population in generation ", PDT$'generation' ) ) +
+    xlab(obj_names[1]) +
+    ylab(obj_names[2]) #+
+  #grids(linetype = "dashed") +
+  #theme_classic()
+}
+    update_inclusion_of_objectives()
 
 names <- PDT$'get_attribute_names'()
 values <- PDT$'get_crucial_values'()
@@ -212,7 +234,8 @@ reduced = PDT$'shrink_useless_nodes'(PDT$'population'[[86]]$'genotype')
 view_tree(tree=reduced)
 
 x = data.frame("a"=c(1,2,3),"b"=c(4,5,6))
-x
+max(select(x,a))
+
 x[1,2]
 colnames(x)[[1]]
 

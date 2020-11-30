@@ -416,6 +416,9 @@ class DecisionTree_EA: #oblique, binary trees
 		self.uniform_mutation_rate = uniform_mutation_rate
 		self.forced_full = forced_full
 		self.subtree_mutation_max_tree_depth = subtree_mutation_max_tree_depth
+		
+		#Initialisation
+		#self.update_forced_balanced_trees()
 		for objective_name in objective_names:
 			self.add_objective(objective_name=objective_name)
 		
@@ -530,6 +533,13 @@ class DecisionTree_EA: #oblique, binary trees
 		"""
 		self.data = pd.DataFrame(data)
 		self.output_labels = list(labels)
+
+	#def update_forced_balanced_trees(self):
+	#	if self.forced_full:
+	#		self.force_balanced_trees = True
+	#	else:
+	#		if self.
+	#		self.force_balanced_trees = False
 
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self._parse_tree_r(tree)

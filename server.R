@@ -355,7 +355,7 @@ shinyServer(function(input, output, session){
   #disable("index_tree")
   #hide("pareto_front")
   max_objectives <- length(available_objectives)
-  
+  #initial_values <- list("accuracy"=0, "gini"=0, "entropy"=0)
   
   #Reactives
   reactive_variables <- reactiveValues()
@@ -386,7 +386,12 @@ shinyServer(function(input, output, session){
   reactive_variables$crucial_values_df <- NULL
   reactive_variables$view_by_index <- FALSE
   
-  ########################
+  
+  pareto_data <- reactive({
+    subset(reactive_variables$pareto, Gen==input$pareto_gen)
+  })
+  
+  ########################   
   # Functions ############
   
   get_best_tree <- function(){
@@ -659,6 +664,14 @@ shinyServer(function(input, output, session){
   
   observeEvent(input$max_depth_enabled, {toggle("max_depth_value")})
   
+  observeEvent(input$splits_done, { 
+    PDT$'initial_setup'()
+    isolate({
+      updateTabsetPanel(session, "EA_tabs",
+                        selected = "evolve")
+      })
+    })
+  
   observeEvent(input$accuracy_objective, {
     update_default_rates()
     toggle_objective_checkboxes()
@@ -716,7 +729,7 @@ shinyServer(function(input, output, session){
     }
     else{
       #ind_index <- input$tree_index+1
-      ind_index <- index+1
+      ind_index <- index
       print(paste("by index: ", ind_index))
       best_tree <- PDT$'get_tree_by_individual_index'(ind_index)
     }
@@ -741,7 +754,7 @@ shinyServer(function(input, output, session){
       else{
         if (node$'is_root'()){
           shape="box"
-          color="lightgreen"
+          #color="lightgreen"
         }
         else{
           shape="box"
@@ -789,8 +802,10 @@ shinyServer(function(input, output, session){
   output$pareto_front <- renderPlot({
     
     #print(paste("filtered_indexes",filtered_indexes))
-    current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
-    current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
+    #current_gen<-max(reactive_variables$pareto$Gen, na.rm = TRUE)
+    #current_gen_pareto <- subset(reactive_variables$pareto, Gen==current_gen)
+    current_gen_pareto <- pareto_data()
+    value_at_gen1 <- max(select(subset(reactive_variables$pareto, Gen==1),accuracy))
     obj_names <- PDT$'get_objective_names'()
     filtered_indexes <- PDT$'get_filtered_individual_indexes'()
     #if (length(filtered_indexes)!=length(current_gen_pareto)){
@@ -806,7 +821,9 @@ shinyServer(function(input, output, session){
                                 segment.color = 'grey50') +
       ggtitle(paste("Population in generation ", PDT$'generation' ) ) +
       xlab(obj_names[1]) +
-      ylab(obj_names[2]) #+
+      ylab(obj_names[2]) + 
+      geom_vline(xintercept = value_at_gen1, linetype="dotted", 
+                                      color = "blue", size=1)#+
       #grids(linetype = "dashed") +
       #theme_classic()
     
