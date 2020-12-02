@@ -13,6 +13,7 @@ data<-GermanCredit
 
 shinyServer(function(input, output, session){
   
+  # To increase the size of the input file
   options(shiny.maxRequestSize=100*1024^2)
   
   ## Original Data
@@ -31,6 +32,7 @@ shinyServer(function(input, output, session){
     }
   })
   
+  # To show input dataset
   output$dataset <- renderDataTable({  
     if(is.null(original_data())){return()}
     original_data()
@@ -94,20 +96,25 @@ shinyServer(function(input, output, session){
                })
   )
   
+  # Making which regression to be selected as reactive
   method<-reactive({
     input$method
   })
   
+  # Making how many decision trees to be selected as reactive
   trees<-reactive({
     input$trees
   })
   
+  # Making max. depth of decision trees to be selected as reactive
   max_depth<-reactive({
     input$max_depth
   })
   
+  
   global <- reactiveValues(response=FALSE)
   global_plot <- reactiveValues(value=TRUE)
+  
   
   # Show the values in an HTML table ----
   output$values <- renderTable({
@@ -115,14 +122,14 @@ shinyServer(function(input, output, session){
     isolate(sliderValues())
   })
   
+  
   # Show the values in an HTML table ----
   output$col <- renderTable({
     colnames(original_data())
   }, caption=paste("Variables in the dataset"),
   caption.placement = getOption("xtable.caption.placement", "top"),
   caption.width = getOption("xtable.caption.width", NULL))
-  
-  
+
   
   # Submit Calculate Parameter Button
   observeEvent(input$button, {
@@ -138,10 +145,9 @@ shinyServer(function(input, output, session){
                })
   })
   
+  # Making the main function 'Classifier' as reactive
   Main<-reactive({
-    
     Classifier(original_data(),  method(), trees(), max_depth())
-    
   })  
   
   # Submit Calculate Parameter Button
@@ -170,15 +176,11 @@ shinyServer(function(input, output, session){
       }
       global$response= FALSE
     }
-    
-    
     else { return(NULL) 
     }
-    
-    
-    
   })
   
+  # A modal before showing the plot 
   observeEvent(input$button1, {
     # Show a modal when the button is pressed
     shinyalert("Showing plot.....please wait", type = "info",showConfirmButton = TRUE,
@@ -190,6 +192,7 @@ shinyServer(function(input, output, session){
     )
   })
   
+  # Making the option for selecting the decision tree to be viewed with the properties such as max.accuracy, min. gini index and max. AUROC as reactive
   option<-reactive({
     input$button1
     isolate(if(global_plot$value==T){
@@ -199,10 +202,8 @@ shinyServer(function(input, output, session){
     )
   })
   
-  
+  # Showing plot for decision tree selected by different parameter
   output$plot<-renderPlot({
-    
-    
     if(option()=="ind_max_acc"){
       
       withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
@@ -217,9 +218,6 @@ shinyServer(function(input, output, session){
                    message = 'Making plot', value = 0.5 )
       
     }else {
-      
-      
-      
       withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
                                branch.lty=3, shadow.col="gray", nn=TRUE)},
                    message = 'Making plot', value = 0.5  )
@@ -229,7 +227,7 @@ shinyServer(function(input, output, session){
   
   
   
-  
+  # Showing decision trees values(max.accuracy, min. gini index and max. AUROC) as reactive which are chosen based on the parameter selected 
   Values <- reactive({
     input$button1
     if(option()=="ind_max_acc"){
@@ -261,7 +259,7 @@ shinyServer(function(input, output, session){
     
   })
   
-  
+  # This will ouput the values table to ui
   output$res<-renderTable({
     input$button1
     isolate(if(global_plot$value==T){
@@ -270,6 +268,7 @@ shinyServer(function(input, output, session){
     else  return(NULL)
     )
   })
+  
   
   #~~~~ Download the reduced dataset
   output$down <- downloadHandler(
@@ -280,6 +279,7 @@ shinyServer(function(input, output, session){
       write.csv(Main()$Reduced_data, file, row.names = FALSE)
     }
   )
+  
   
   #~~~~ Download the decision tree plot
   output$down1<-downloadHandler(
@@ -332,13 +332,13 @@ shinyServer(function(input, output, session){
   
   
   
-  #use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
+  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
   #use_python("C:/Users/fredx/Anaconda3",required=T)
   # py_install("numpy")
   # py_install("pandas")
   # py_install("statistics")
   # py_install("pickle")
-  use_virtualenv("temp_env")
+  #use_virtualenv("temp_env")
   reticulate::source_python("Source_EA.py")
   
   #Parameters
