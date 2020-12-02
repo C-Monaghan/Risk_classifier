@@ -27,7 +27,6 @@ shinyUI(ui = tagList(
     # Home --------------------------------------------------------------------
     tabPanel("Home",
              column(12, align="center",
-                    # img(src='logo.png', align = "right", height=120, width=100),
                     h2(strong("Welcome to the Shiny App for using MI based classifier in R")),
                     tags$img(src = "logo.jpg",height=300,width=1000),
                     h4(strong("Note: For more help on usage, please look into the 'Guides' tab and 'About us' in detail.")),
@@ -109,6 +108,7 @@ shinyUI(ui = tagList(
                                                                        # Input: Variable Selection Method ----
                                                                        radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression"," Neither (Original Dataset)"),selected = "Ridge Regression"),
                                                                        
+                                                                       # Input: Constraints while building decision tree ----
                                                                        h4("Constraints while building decision trees"),
                                                                        
                                                                        # Input: No. of Decision Trees ----
@@ -116,9 +116,7 @@ shinyUI(ui = tagList(
                                                                                    min = 20, max=800,
                                                                                    step = 4,animate = TRUE,value = 100), 
                                                                        
-                                                                       # Input: Constraints while building decision tree ----
-                                                                       
-                                                                       
+                                                                       # Input: To select the max. depth of the tree----
                                                                        sliderInput("max_depth", "Max. depth of the tree",
                                                                                    min = 1, max=30,
                                                                                    step = 1,animate = TRUE,value = 10)
