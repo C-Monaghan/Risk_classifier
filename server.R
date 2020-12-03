@@ -13,7 +13,6 @@ data<-GermanCredit
 
 shinyServer(function(input, output, session){
   
-  # To increase the size of the input file
   options(shiny.maxRequestSize=100*1024^2)
   
   ## Original Data
@@ -32,7 +31,6 @@ shinyServer(function(input, output, session){
     }
   })
   
-  # To show input dataset
   output$dataset <- renderDataTable({  
     if(is.null(original_data())){return()}
     original_data()
@@ -96,25 +94,20 @@ shinyServer(function(input, output, session){
                })
   )
   
-  # Making which regression to be selected as reactive
   method<-reactive({
     input$method
   })
   
-  # Making how many decision trees to be selected as reactive
   trees<-reactive({
     input$trees
   })
   
-  # Making max. depth of decision trees to be selected as reactive
   max_depth<-reactive({
     input$max_depth
   })
   
-  
   global <- reactiveValues(response=FALSE)
   global_plot <- reactiveValues(value=TRUE)
-  
   
   # Show the values in an HTML table ----
   output$values <- renderTable({
@@ -122,14 +115,14 @@ shinyServer(function(input, output, session){
     isolate(sliderValues())
   })
   
-  
   # Show the values in an HTML table ----
   output$col <- renderTable({
     colnames(original_data())
   }, caption=paste("Variables in the dataset"),
   caption.placement = getOption("xtable.caption.placement", "top"),
   caption.width = getOption("xtable.caption.width", NULL))
-
+  
+  
   
   # Submit Calculate Parameter Button
   observeEvent(input$button, {
@@ -145,9 +138,10 @@ shinyServer(function(input, output, session){
                })
   })
   
-  # Making the main function 'Classifier' as reactive
   Main<-reactive({
+    
     Classifier(original_data(),  method(), trees(), max_depth())
+    
   })  
   
   # Submit Calculate Parameter Button
@@ -176,11 +170,15 @@ shinyServer(function(input, output, session){
       }
       global$response= FALSE
     }
+    
+    
     else { return(NULL) 
     }
+    
+    
+    
   })
   
-  # A modal before showing the plot 
   observeEvent(input$button1, {
     # Show a modal when the button is pressed
     shinyalert("Showing plot.....please wait", type = "info",showConfirmButton = TRUE,
@@ -192,7 +190,6 @@ shinyServer(function(input, output, session){
     )
   })
   
-  # Making the option for selecting the decision tree to be viewed with the properties such as max.accuracy, min. gini index and max. AUROC as reactive
   option<-reactive({
     input$button1
     isolate(if(global_plot$value==T){
@@ -202,8 +199,10 @@ shinyServer(function(input, output, session){
     )
   })
   
-  # Showing plot for decision tree selected by different parameter
+  
   output$plot<-renderPlot({
+    
+    
     if(option()=="ind_max_acc"){
       
       withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_acc]],roundint=FALSE,extra=104, box.palette="GnBu",
@@ -218,6 +217,9 @@ shinyServer(function(input, output, session){
                    message = 'Making plot', value = 0.5 )
       
     }else {
+      
+      
+      
       withProgress({rpart.plot(Main()$Trees[[Main()$ind_max_AUROC]],roundint=FALSE,extra=104, box.palette="GnBu",
                                branch.lty=3, shadow.col="gray", nn=TRUE)},
                    message = 'Making plot', value = 0.5  )
@@ -227,7 +229,7 @@ shinyServer(function(input, output, session){
   
   
   
-  # Showing decision trees values(max.accuracy, min. gini index and max. AUROC) as reactive which are chosen based on the parameter selected 
+  
   Values <- reactive({
     input$button1
     if(option()=="ind_max_acc"){
@@ -259,7 +261,7 @@ shinyServer(function(input, output, session){
     
   })
   
-  # This will ouput the values table to ui
+  
   output$res<-renderTable({
     input$button1
     isolate(if(global_plot$value==T){
@@ -268,7 +270,6 @@ shinyServer(function(input, output, session){
     else  return(NULL)
     )
   })
-  
   
   #~~~~ Download the reduced dataset
   output$down <- downloadHandler(
@@ -279,7 +280,6 @@ shinyServer(function(input, output, session){
       write.csv(Main()$Reduced_data, file, row.names = FALSE)
     }
   )
-  
   
   #~~~~ Download the decision tree plot
   output$down1<-downloadHandler(
@@ -330,15 +330,24 @@ shinyServer(function(input, output, session){
   ######################################################################################
   ######################################################################################
   
+  PYTHON_DEPENDENCIES = c('pandas','numpy')
   
+  # Begin------------------ App local setup (Do not edit) ------------------------ #
+  virtualenv_dir <- "fresh"
+  use_virtualenv(virtualenv_dir)
+  # End-------------------- App local setup (Do not edit) ------------------------ #
   
-  use_python("/Users/sajalkaurminhas/anaconda3/bin/python",required=T)
-  #use_python("C:/Users/fredx/Anaconda3",required=T)
-  # py_install("numpy")
-  # py_install("pandas")
-  # py_install("statistics")
-  # py_install("pickle")
-  #use_virtualenv("temp_env")
+  # Begin------------------ App virtualenv setup (Do not edit) ------------------- #
+  # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+  # python_path = Sys.getenv('PYTHON_PATH')
+  # 
+  # # Create virtual env and install dependencies
+  # reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+  # reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
+  # reticulate::use_virtualenv(virtualenv_dir, required = T)
+
+  # End-------------------- App virtualenv setup (Do not edit) ------------------- #
+  
   reticulate::source_python("Source_EA.py")
   
   #Parameters
@@ -390,6 +399,23 @@ shinyServer(function(input, output, session){
   pareto_data <- reactive({
     subset(reactive_variables$pareto, Gen==input$pareto_gen)
   })
+  
+  index_tree_values_df <- reactive({
+    values <- PDT$'get_test_values'(individual_index = input$tree_index)
+    df <- data.frame("Name"=character(),
+               "Value"=double(),
+               stringsAsFactors = FALSE)
+    df[nrow(df) + 1,] <- c("Index",input$tree_index)
+    df[nrow(df) + 1,] <- c("Train accuracy",values[[1]])
+    df[nrow(df) + 1,] <- c("Test accuracy",input$tree_index)
+    df[nrow(df) + 1,] <- c("Train entropy",values[[2]])
+    df[nrow(df) + 1,] <- c("Test entropy",input$tree_index)
+    df[nrow(df) + 1,] <- c("Train gini index",values[[3]])
+    df[nrow(df) + 1,] <- c("Test gini index",input$tree_index)
+  })
+  
+  
+  
   
   ########################   
   # Functions ############
@@ -846,6 +872,21 @@ shinyServer(function(input, output, session){
                                                      "$(this.api().table().header()).css({'color': '#000'});","}")
                                     )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
   })}
+  
+  plot_tree_values <- function(){
+    #tree_values_df <- 
+    output$tree_values <- renderDT({reactive_variables$crucial_values_df %>% datatable(selection=list(target="cell"),
+                                                                                          options = list(scrollX = TRUE,
+                                                                                                         #scrolly = TRUE,
+                                                                                                         paginate = T,
+                                                                                                         lengthMenu = c(5, 10, 15),
+                                                                                                         pageLength = 15,
+                                                                                                         initComplete = JS(
+                                                                                                           "function(settings, json) {",
+                                                                                                           "$(this.api().table().header()).css({'color': '#000'});","}")
+                                                                                          )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
+    })}
+  
   
 })
 

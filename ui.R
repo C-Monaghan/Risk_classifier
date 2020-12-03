@@ -27,6 +27,7 @@ shinyUI(ui = tagList(
     # Home --------------------------------------------------------------------
     tabPanel("Home",
              column(12, align="center",
+                    # img(src='logo.png', align = "right", height=120, width=100),
                     h2(strong("Welcome to the Shiny App for using MI based classifier in R")),
                     tags$img(src = "logo.jpg",height=300,width=1000),
                     h4(strong("Note: For more help on usage, please look into the 'Guides' tab and 'About us' in detail.")),
@@ -108,7 +109,6 @@ shinyUI(ui = tagList(
                                                                        # Input: Variable Selection Method ----
                                                                        radioButtons("method", "Step 1: Type of Variable Selection Method:",choices = list("Ridge Regression","Lasso Regression"," Neither (Original Dataset)"),selected = "Ridge Regression"),
                                                                        
-                                                                       # Input: Constraints while building decision tree ----
                                                                        h4("Constraints while building decision trees"),
                                                                        
                                                                        # Input: No. of Decision Trees ----
@@ -116,7 +116,9 @@ shinyUI(ui = tagList(
                                                                                    min = 20, max=800,
                                                                                    step = 4,animate = TRUE,value = 100), 
                                                                        
-                                                                       # Input: To select the max. depth of the tree----
+                                                                       # Input: Constraints while building decision tree ----
+                                                                       
+                                                                       
                                                                        sliderInput("max_depth", "Max. depth of the tree",
                                                                                    min = 1, max=30,
                                                                                    step = 1,animate = TRUE,value = 10)
@@ -176,7 +178,7 @@ shinyUI(ui = tagList(
                           tabPanel(" View Dataset ", value = "data",dataTableOutput("dataset"),tableOutput("col")),
                           tabPanel("Method Specification", value="specification",tableOutput("values"),br(),useShinyalert() ,h5("Click Calculate button after selecting the desired inputs!!"),actionButton("button", "Calculate")),
                           tabPanel("Dataset after variable selection",value="download",dataTableOutput("Reduced_data"), tableOutput("colred")),
-                          tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Show desired plot button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "100%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
+                          tabPanel("Classifier",value="plot",br(),useShinyalert() ,h5("Click Show desired plot button after selecting the decision tree to be viewed in inputs!!"),actionButton("button1", "Show desired plot"),addSpinner(plotOutput("plot",  width = "120%"), spin = "circle", color = "#E41A1C"),downloadButton(outputId="down1",label ="Download the plot"),tableOutput("res"))
               )
     )
     ),
@@ -261,7 +263,7 @@ shinyUI(ui = tagList(
                                              plotOutput("evolution_progress_nodes")),
                                     tabPanel("View trees", value="tree",
                                              visNetworkOutput("network", height = "800px", width = "800px"),
-                                             DTOutput("tree_partitions"))
+                                             DTOutput("tree_values"))
                                     )
                         ))
 
@@ -270,7 +272,7 @@ shinyUI(ui = tagList(
 
 
     # About Us ----------------------------------------------------------------
-    tabPanel("About Us",tags$img(src = "About.png",height=800,width=1420)
+    tabPanel("About Us",
              
              
              
