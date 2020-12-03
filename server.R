@@ -3,9 +3,6 @@ source("Main.R")
 # Library for running shinyapp
 library(shiny)
 
-# Library for using python scripts in shiny
-library(reticulate)
-
 # Loading the dataset
 load("GermanCredit.Rdata")
 data<-GermanCredit
@@ -329,24 +326,31 @@ shinyServer(function(input, output, session){
   ##########  EVOLUTIONARY ALGORITHM ###################################################
   ######################################################################################
   ######################################################################################
+  library("reticulate")
   
   PYTHON_DEPENDENCIES = c('pandas','numpy')
   
   # Begin------------------ App local setup (Do not edit) ------------------------ #
-  virtualenv_dir <- "fresh"
-  use_virtualenv(virtualenv_dir)
+  # python_path = py_discover_config()[[1]]
+  # reticulate::virtualenv_create(envname = 'python3_env', 
+  #                               python = python_path)
+  # reticulate::virtualenv_install('python3_env', 
+  #                                packages = PYTHON_DEPENDENCIES)
+  # reticulate::use_virtualenv('python3_env', required = T)
   # End-------------------- App local setup (Do not edit) ------------------------ #
   
   # Begin------------------ App virtualenv setup (Do not edit) ------------------- #
-  # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-  # python_path = Sys.getenv('PYTHON_PATH')
-  # 
-  # # Create virtual env and install dependencies
-  # reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-  # reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
-  # reticulate::use_virtualenv(virtualenv_dir, required = T)
+  virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+  python_path = Sys.getenv('PYTHON_PATH')
+  
+  # Create virtual env and install dependencies
+  reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+  reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
+  reticulate::use_virtualenv(virtualenv_dir, required = T)
 
   # End-------------------- App virtualenv setup (Do not edit) ------------------- #
+  
+  
   
   reticulate::source_python("Source_EA.py")
   

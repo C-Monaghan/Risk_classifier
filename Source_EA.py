@@ -17,7 +17,7 @@ import pickle
 import time
 from datetime import datetime
 
-class Objective:S
+class Objective:
 	def __init__(self, objective_name, index, to_max = True, best = None, worst = None):
 		self.objective_name = objective_name
 		self.index = index
