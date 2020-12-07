@@ -200,13 +200,14 @@ shinyUI(ui = tagList(
                                             actionButton("restart_evolution","Restart evoution"),
                                             numericInput("pareto_gen","Show generation in plot:", value=0, min=0, step=1)),
                           conditionalPanel(condition="input.EA_tabs=='tree'",
-                                           actionButton("update_tree","View best tree"),
-                                           actionButton("index_tree","View tree by index"),
+                                           #actionButton("update_tree","View best tree"),
+                                           actionButton("index_tree","View tree"),
                                            numericInput("tree_index", "Tree index", value=0, min=0, max=100, step=1),
                                            #actionButton("clean_and_reduce","Clean and reduce tree"),
                                            actionButton("save_tree_python","Save tree"),
                                            actionButton("load_tree_python","Load tree"),
-                                           downloadButton(outputId="net",label ="Download the tree in .html"))
+                                           downloadButton(outputId="net",label ="Download the tree in .html"),
+                                           DTOutput("tree_values"))
                           ),
               mainPanel(tabsetPanel(id = "EA_tabs",
                                     tabPanel("Setup", value="setup",
@@ -262,8 +263,8 @@ shinyUI(ui = tagList(
                                              plotOutput("evolution_progress"),
                                              plotOutput("evolution_progress_nodes")),
                                     tabPanel("View trees", value="tree",
-                                             visNetworkOutput("network", height = "800px", width = "800px"),
-                                             DTOutput("tree_values"))
+                                             visNetworkOutput("network", height = "800px", width = "800px")
+                                             )
                                     )
                         ))
 

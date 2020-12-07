@@ -326,37 +326,24 @@ shinyServer(function(input, output, session){
   ##########  EVOLUTIONARY ALGORITHM ###################################################
   ######################################################################################
   ######################################################################################
-  library("reticulate")
-  
-  PYTHON_DEPENDENCIES = c('pandas','numpy')
-  
-  # Begin------------------ App local setup (Do not edit) ------------------------ #
-  # python_path = py_discover_config()[[1]]
-  # reticulate::virtualenv_create(envname = 'python3_env', 
-  #                               python = python_path)
-  # reticulate::virtualenv_install('python3_env', 
-  #                                packages = PYTHON_DEPENDENCIES)
-  # reticulate::use_virtualenv('python3_env', required = T)
-  # End-------------------- App local setup (Do not edit) ------------------------ #
-  
-  # Begin------------------ App virtualenv setup (Do not edit) ------------------- #
-  virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-  python_path = Sys.getenv('PYTHON_PATH')
-  
-  # Create virtual env and install dependencies
-  reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-  reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
-  reticulate::use_virtualenv(virtualenv_dir, required = T)
 
-  # End-------------------- App virtualenv setup (Do not edit) ------------------- #
+  library("reticulate")
+  virtualenv_dir <- "fresh"
+  use_virtualenv(virtualenv_dir)
   
-  
-  
+  # PYTHON_DEPENDENCIES = c('pandas','numpy')
+  # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+  # python_path = Sys.getenv('PYTHON_PATH')
+  # reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+  # reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
+  # reticulate::use_virtualenv(virtualenv_dir, required = T)
   reticulate::source_python("Source_EA.py")
   
   #Parameters
-  available_objectives <- c("accuracy", "nodes", "gini", "entropy", "max_depth") #ordering must be kept
+  available_objectives <- c("accuracy", "nodes", "gini", "entropy", "max_depth") #order matters
+  #Is the objective to be maximised?
   to_max <- c(TRUE, FALSE, FALSE, FALSE, FALSE)
+  #Default inclusion in the ui
   initially_included <- c(FALSE, FALSE, FALSE, FALSE, FALSE)
   
   #Initial setup
@@ -365,10 +352,7 @@ shinyServer(function(input, output, session){
   disable("gini_objective")
   disable("entropy_objective")
   disable("restart_evolution")
-  #disable("index_tree")
-  #hide("pareto_front")
   max_objectives <- length(available_objectives)
-  #initial_values <- list("accuracy"=0, "gini"=0, "entropy"=0)
   
   #Reactives
   reactive_variables <- reactiveValues()
@@ -404,19 +388,24 @@ shinyServer(function(input, output, session){
     subset(reactive_variables$pareto, Gen==input$pareto_gen)
   })
   
-  index_tree_values_df <- reactive({
-    values <- PDT$'get_test_values'(individual_index = input$tree_index)
-    df <- data.frame("Name"=character(),
-               "Value"=double(),
-               stringsAsFactors = FALSE)
-    df[nrow(df) + 1,] <- c("Index",input$tree_index)
-    df[nrow(df) + 1,] <- c("Train accuracy",values[[1]])
-    df[nrow(df) + 1,] <- c("Test accuracy",input$tree_index)
-    df[nrow(df) + 1,] <- c("Train entropy",values[[2]])
-    df[nrow(df) + 1,] <- c("Test entropy",input$tree_index)
-    df[nrow(df) + 1,] <- c("Train gini index",values[[3]])
-    df[nrow(df) + 1,] <- c("Test gini index",input$tree_index)
-  })
+  # index_tree_values_df <- reactive({
+  #   values <- PDT$'get_test_values'(test_data=Main()$Test_data, 
+  #                                   test_labels=Main()$Test_data$Class,
+  #                                   individual_index = input$tree_index)
+  #   print(paste0("get_test_values output:",values))
+  #   df <- data.frame("Name"=character(),
+  #              "Value"=double(),
+  #              stringsAsFactors = FALSE)
+  #   df[nrow(df) + 1,] <- c("Index",input$tree_index)
+  #   df[nrow(df) + 1,] <- c("Train accuracy",values[[1]])
+  #   df[nrow(df) + 1,] <- c("Test accuracy",input$tree_index)
+  #   df[nrow(df) + 1,] <- c("Train entropy",values[[2]])
+  #   df[nrow(df) + 1,] <- c("Test entropy",input$tree_index)
+  #   df[nrow(df) + 1,] <- c("Train gini index",values[[3]])
+  #   df[nrow(df) + 1,] <- c("Test gini index",input$tree_index)
+  #   print(paste0("df: ",df))
+  #   df
+  # })
   
   
   
@@ -763,6 +752,25 @@ shinyServer(function(input, output, session){
       print(paste("by index: ", ind_index))
       best_tree <- PDT$'get_tree_by_individual_index'(ind_index)
     }
+    test_values <- PDT$'get_test_values'(test_data=Main()$Test_data, 
+                                    test_labels=Main()$Test_data$Class,
+                                    individual_index = input$tree_index)
+    train_values <- PDT$'get_train_values'(individual_index = input$tree_index)
+    generation_of_creation <- PDT$'population'[[input$tree_index+1]]$'generation_of_creation'
+    df <- data.frame("Name"=character(),
+                     "Value"=double(),
+                     stringsAsFactors = FALSE)
+    df[nrow(df) + 1,] <- c("Index",input$tree_index)
+    df[nrow(df) + 1,] <- c("Created on gen",generation_of_creation)
+    df[nrow(df) + 1,] <- c("Train accuracy",train_values[[1]])
+    df[nrow(df) + 1,] <- c("Test accuracy",test_values[[1]])
+    df[nrow(df) + 1,] <- c("Train entropy",train_values[[2]])
+    df[nrow(df) + 1,] <- c("Test entropy",test_values[[2]])
+    df[nrow(df) + 1,] <- c("Train gini index",train_values[[3]])
+    df[nrow(df) + 1,] <- c("Test gini index",test_values[[3]])
+    plot_tree_values(df)
+    
+    
     best_tree_nodes <- best_tree$'get_subtree_nodes'()
     connections <- best_tree$'get_connections'()
     connections
@@ -876,20 +884,8 @@ shinyServer(function(input, output, session){
                                                      "$(this.api().table().header()).css({'color': '#000'});","}")
                                     )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
   })}
-  
-  plot_tree_values <- function(){
-    #tree_values_df <- 
-    output$tree_values <- renderDT({reactive_variables$crucial_values_df %>% datatable(selection=list(target="cell"),
-                                                                                          options = list(scrollX = TRUE,
-                                                                                                         #scrolly = TRUE,
-                                                                                                         paginate = T,
-                                                                                                         lengthMenu = c(5, 10, 15),
-                                                                                                         pageLength = 15,
-                                                                                                         initComplete = JS(
-                                                                                                           "function(settings, json) {",
-                                                                                                           "$(this.api().table().header()).css({'color': '#000'});","}")
-                                                                                          )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
-    })}
+  plot_tree_values <- function(index_tree_values_df){
+  output$tree_values <- renderDT({index_tree_values_df})}
   
   
 })

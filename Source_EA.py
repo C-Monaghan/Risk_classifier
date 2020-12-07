@@ -120,7 +120,7 @@ class DT_Node:
 		self.unique_output_labels = unique_output_labels
 		self.output_label_count = {label:0 for label in unique_output_labels}
 
-	def update(self,attribute,comparable_value,operator,operator_name, output_labels): #only used when parsing trees from R
+	def update(self,attribute,comparable_value,operator,operator_name, output_labels):
 		self.updated = True
 		self.attribute = attribute
 		self.comparable_value = comparable_value
@@ -1220,12 +1220,25 @@ class DecisionTree_EA: #oblique, binary trees
 				print("Individual not specified")
 				return None
 		data = pd.DataFrame(test_data)
-		labels = list(labels)
+		labels = list(test_labels)
 		copy_tree = individual.genotype.copy()
 		tree_output_labels = self.evaluate_tree(root_node=copy_tree, data=data)
-		accuracy = self.calculate_accuracy(model_output_labels = tree_output_labels)
+		accuracy = self.calculate_accuracy(model_output_labels = tree_output_labels, compare_labels=labels)
 		entropy = self.calculate_weighted_entropy(tree=copy_tree)
 		gini = self.calculate_weighted_gini(tree=copy_tree)
+		return accuracy, entropy, gini
+		
+	def get_train_values(self, individual=None, individual_index = None):
+		if individual is None:
+			if individual_index is not None:
+				individual = self.population[individual_index]
+			else:
+				print("Individual not specified")
+				return None
+		tree_output_labels = self.evaluate_tree(root_node=individual.genotype)
+		accuracy = self.calculate_accuracy(model_output_labels = tree_output_labels)
+		entropy = self.calculate_weighted_entropy(tree=individual.genotype)
+		gini = self.calculate_weighted_gini(tree=individual.genotype)
 		return accuracy, entropy, gini
 	
 	def _sort_individuals(self, population = None, objective_index = 0):
