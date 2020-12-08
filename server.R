@@ -327,16 +327,16 @@ shinyServer(function(input, output, session){
   ######################################################################################
   ######################################################################################
 
-  library("reticulate")
-  virtualenv_dir <- "fresh"
-  use_virtualenv(virtualenv_dir)
+  #library("reticulate")
+  #virtualenv_dir <- "fresh"
+  #use_virtualenv(virtualenv_dir)
   
-  # PYTHON_DEPENDENCIES = c('pandas','numpy')
-  # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-  # python_path = Sys.getenv('PYTHON_PATH')
-  # reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-  # reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
-  # reticulate::use_virtualenv(virtualenv_dir, required = T)
+   PYTHON_DEPENDENCIES = c('pandas','numpy')
+   virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+   python_path = Sys.getenv('PYTHON_PATH')
+   reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+   reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
+   reticulate::use_virtualenv(virtualenv_dir, required = T)
   reticulate::source_python("Source_EA.py")
   
   #Parameters
@@ -387,28 +387,6 @@ shinyServer(function(input, output, session){
   pareto_data <- reactive({
     subset(reactive_variables$pareto, Gen==input$pareto_gen)
   })
-  
-  # index_tree_values_df <- reactive({
-  #   values <- PDT$'get_test_values'(test_data=Main()$Test_data, 
-  #                                   test_labels=Main()$Test_data$Class,
-  #                                   individual_index = input$tree_index)
-  #   print(paste0("get_test_values output:",values))
-  #   df <- data.frame("Name"=character(),
-  #              "Value"=double(),
-  #              stringsAsFactors = FALSE)
-  #   df[nrow(df) + 1,] <- c("Index",input$tree_index)
-  #   df[nrow(df) + 1,] <- c("Train accuracy",values[[1]])
-  #   df[nrow(df) + 1,] <- c("Test accuracy",input$tree_index)
-  #   df[nrow(df) + 1,] <- c("Train entropy",values[[2]])
-  #   df[nrow(df) + 1,] <- c("Test entropy",input$tree_index)
-  #   df[nrow(df) + 1,] <- c("Train gini index",values[[3]])
-  #   df[nrow(df) + 1,] <- c("Test gini index",input$tree_index)
-  #   print(paste0("df: ",df))
-  #   df
-  # })
-  
-  
-  
   
   ########################   
   # Functions ############
@@ -868,10 +846,6 @@ shinyServer(function(input, output, session){
     #text(dist ~speed, labels=rownames(cars),data=cars, cex=0.9, font=2)
   })
   
-  dt_crucial_values <- function(){
-    
-  }
-  
   plot_crucial_values <- function(){
   output$crucial_values <- renderDT({reactive_variables$crucial_values_df %>% datatable(selection=list(target="cell"),
                                     options = list(scrollX = TRUE,
@@ -884,6 +858,7 @@ shinyServer(function(input, output, session){
                                                      "$(this.api().table().header()).css({'color': '#000'});","}")
                                     )) %>% DT::formatStyle(columns = names(reactive_variables$crucial_values_df), color="blue")
   })}
+  
   plot_tree_values <- function(index_tree_values_df){
   output$tree_values <- renderDT({index_tree_values_df})}
   
