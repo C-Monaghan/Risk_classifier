@@ -1,31 +1,38 @@
-# Loading Libraries
+library(party)
 library(rpart.plot)
 library(glmnet)
 library(rpart)
+library(rattle)
+library(RcppAlgos)
+library(tidyverse)
 library(caret)
-library("reticulate")
-library("tidyrules")
-library("dplyr")
+library(leaps)
+#library("reticulate")
+library(tidyrules)
+library(dplyr)
+library(pander)
 library(ROCR)
 require(caTools)
+library(rlist)
 library(DT)
 library(visNetwork)
 library(ggplot2)
 library(arsenal)
 library(hrbrthemes)
 library(ggrepel)
+ # library(profvis) for profiling
 
 # Loading the dataset
 load("GermanCredit.Rdata")
 default_data<-GermanCredit
 
- tree.size <- function(tree) {
-   if (is.null(tree)) {
-     return(0)
-   } else {
-     return(1 + tree.size(tree$left) + tree.size(tree$right))
-   }
- }
+tree.size <- function(tree) {
+  if (is.null(tree)) {
+    return(0)
+  } else {
+    return(1 + tree.size(tree$left) + tree.size(tree$right))
+  }
+}
 
 # The main function
 Classifier<-function(default_data,choose_regression = "Ridge Regression",selection=100,max_depth = 20){
@@ -35,11 +42,8 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   
   # Omitting missing data 
   default_data<-na.omit(default_data)
-  
-  # Storing the class labels
   y=default_data[,1]
   
-  # Choosing the type of regression
   if (choose_regression=="Ridge Regression") {
     
     # Cleaning the data before using
@@ -105,8 +109,6 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
     default_data<-data.frame(Class=y,default_data)
   }
   else {
-     
-    # If no regression is selected it will return the original dataset
     default_data
   }
   
@@ -143,6 +145,7 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   n <- length(Cols)
   
   # Making combination of columns/variable names with minimum 3 variables
+  # selection=100
   minimum_columns <- 3
   id <- lapply(1:(selection),function(i)sample(seq(n),sample(seq(minimum_columns,n))))
   id[[1]] <- seq(n)
@@ -162,6 +165,7 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   train = subset(default_data, sample == TRUE)
   test  = subset(default_data, sample == FALSE)
   
+  # max_depth=10
   # Storing all the combination of trees
   Forest = list()
   for(i in 1:length(Formulas)) { #CHANGE: this is not random
@@ -169,7 +173,6 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
     Forest[[i]] = RPI
   }
   
-  # Remvoing those trees which are having only single node
   z  = list()
   zz = list()
   for (i in 1:length(Forest)){
@@ -238,12 +241,14 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
     acc[[i]] = RP
   }
   
-  # Unlisting the trees to get the accuracy, gini index and AUROC of each trees
+  # Unlisting the trees
   acc<-unlist(acc, use.names=FALSE)
   acc<-acc*100
   acc<-round(acc,digits = 2)
   forest_Gini<-unlist(forest_Gini, use.names=FALSE)
   forest_AUROC<-unlist(forest_AUROC, use.names=FALSE)
+  
+  #which(forest_Gini==0)
   
   max_Acc<-max(acc)
   ind_max_acc<-which.max(acc)
@@ -254,7 +259,6 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   max_AUROC<-max(forest_AUROC)
   ind_max_AUROC<-which.max(forest_AUROC)
   
-  # List of parameters return from the function 
   return(list(Reduced_data=default_data, Test_data=test, Train_data=train, Trees=Forest, Accuracy=acc, max_Acc= max_Acc,ind_max_acc=ind_max_acc, Model_Performance=forest_perf, AUROC=forest_AUROC, max_AUROC=max_AUROC,ind_max_AUROC=ind_max_AUROC, Gini_Index= forest_Gini,min_gini=min_gini,ind_min_gini=ind_min_gini)) 
   
 }

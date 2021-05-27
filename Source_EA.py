@@ -3,19 +3,12 @@
 """
 Created on Sun Sep 17 23:15:50 2020
 @author: Fred Valdez Ameneyro
-My Evolutionary Algorithm for Decision Trees
-Features:
-Evolution seeded with the output of existing methods
-Evolve towards different objectives
-Can output multiple trees with particular advantages when there are conflicting objectives
-Existing solutions can be evolved further
-test
+Evolutionary Algorithm for Binary and Oblique Decision Trees
 """
 import numpy as np
 import random as rd
 import operator as op
 import math
-from inspect import signature
 import pandas as pd
 import copy
 import statistics as st
@@ -23,10 +16,6 @@ from collections import defaultdict
 import pickle
 import time
 from datetime import datetime
-
-#text_to_operator = {"<":op.lt,">=":op.ge,"<=":op.le,">":op.gt,"==":op.eq,"!=":op.ne}
-#operator_to_text = {op.lt:"<",op.ge:">=",op.le:"<=",op.gt:">",op.eq:"==",op.ne:"!="}
-#inverse_operators = {op.lt:op.ge,op.le:op.gt,op.gt:op.le,op.ge:op.lt,op.eq:op.ne}
 
 class Objective:
 	def __init__(self, objective_name, index, to_max = True, best = None, worst = None):
@@ -43,7 +32,7 @@ class Objective:
 	def update_worst(value):
 		self.worst = value
 
-class Individual: #missing __lt__ and __eq__
+class Individual:
 	def __init__(
 			self,
 			generation_of_creation,
@@ -108,9 +97,6 @@ class Attribute:
 	def __str__(self):
 		return "Attribute " + self.name + ",idx:" + str(self.index) + ",n_crucial_values:" + str(len(self.crucial_values))
 
-	#def __eq__(self, other): #might not be needed
-	#	return self.name == other.name
-
 class DT_Node:
 	def __init__(self, unique_output_labels, parent = None):
 		"""
@@ -134,7 +120,7 @@ class DT_Node:
 		self.unique_output_labels = unique_output_labels
 		self.output_label_count = {label:0 for label in unique_output_labels}
 
-	def update(self,attribute,comparable_value,operator,operator_name, output_labels): #only used when parsing trees from R
+	def update(self,attribute,comparable_value,operator,operator_name, output_labels):
 		self.updated = True
 		self.attribute = attribute
 		self.comparable_value = comparable_value
@@ -334,7 +320,7 @@ class DT_Node:
 				self.output_label = label
 				break
 	
-	def copy(self, parent=None): #missing test: evaluate the copy
+	def copy(self, parent=None):
 		"""
 		Returns an unrelated new item with the same characteristics
 		"""
@@ -366,7 +352,13 @@ class DT_Node:
 			entropy_string = "N/A"
 		else:
 			entropy_string = "%.2f"%entropy
-		trailing_string = "\n" + str(self.output_label_count) + "\nGini:" + gini_string + "\nEntropy:" + entropy_string
+		if self.visits_count > 0:
+			output_label_rates = {k:"%.2f"%(count/self.visits_count) for k,count in self.output_label_count.items()}
+		else:
+			output_label_rates = {k:"0" for k,count in self.output_label_count.items()}
+		output_label_strings = [str(k) + ":" + str(v) for k,v in output_label_rates.items()]
+		output_label_string = output_label_strings[0] + "\n" + output_label_strings[1]
+		trailing_string = "\n" + output_label_string + "\nGini:" + gini_string + "\nEntropy:" + entropy_string
 		if self.is_terminal():
 			return "Class: " + str(self.output_label) + trailing_string
 		else:
@@ -533,13 +525,6 @@ class DecisionTree_EA: #oblique, binary trees
 		"""
 		self.data = pd.DataFrame(data)
 		self.output_labels = list(labels)
-
-	#def update_forced_balanced_trees(self):
-	#	if self.forced_full:
-	#		self.force_balanced_trees = True
-	#	else:
-	#		if self.
-	#		self.force_balanced_trees = False
 
 	def insert_r_tree_to_population(self, tree):
 		parsed_tree = self._parse_tree_r(tree)
@@ -1124,22 +1109,27 @@ class DecisionTree_EA: #oblique, binary trees
 		winner = self.get_best_individual(population = competitors, objective_index = 0)
 		return winner
 
-	def evaluate_tree(self,root_node,data=None):
+	def evaluate_tree(self,root_node,data=None, output_labels = None):
 		"""
 		return: list of output labels
+		data should be a dataframe, output_labels a list. If not specified, the training data is used
 		"""
 		if data is None:
 			data = self.data
+		if output_labels is None:
+			output_labels = self.output_labels
 		output_array = []
 		root_node.reset_tree_numbers()
 		for index, row in enumerate(data.iterrows()):
 			#print("label", self.output_labels[index])
-			output_array.append(root_node.evaluate(data_row=row[1], label=self.output_labels[index]))
+			output_array.append(root_node.evaluate(data_row=row[1], label=output_labels[index]))
 		return output_array
 
-	def calculate_accuracy(self, model_output_labels):
+	def calculate_accuracy(self, model_output_labels, compare_labels = None):
+		if compare_labels is None:
+			compare_labels = self.output_labels
 		corrects = 0
-		for i,label in enumerate(self.output_labels):
+		for i,label in enumerate(compare_labels):
 			if label == model_output_labels[i]:
 				corrects = corrects + 1
 		accuracy = corrects / (i+1)
@@ -1222,6 +1212,35 @@ class DecisionTree_EA: #oblique, binary trees
 		end_reduce = time.time()
 		print("Reduce time ",str(end_reduce-start_reduce))
 
+	def get_test_values(self, test_data, test_labels, individual=None, individual_index = None):
+		if individual is None:
+			if individual_index is not None:
+				individual = self.population[individual_index]
+			else:
+				print("Individual not specified")
+				return None
+		data = pd.DataFrame(test_data)
+		labels = list(test_labels)
+		copy_tree = individual.genotype.copy()
+		tree_output_labels = self.evaluate_tree(root_node=copy_tree, data=data)
+		accuracy = self.calculate_accuracy(model_output_labels = tree_output_labels, compare_labels=labels)
+		entropy = self.calculate_weighted_entropy(tree=copy_tree)
+		gini = self.calculate_weighted_gini(tree=copy_tree)
+		return accuracy, entropy, gini
+		
+	def get_train_values(self, individual=None, individual_index = None):
+		if individual is None:
+			if individual_index is not None:
+				individual = self.population[individual_index]
+			else:
+				print("Individual not specified")
+				return None
+		tree_output_labels = self.evaluate_tree(root_node=individual.genotype)
+		accuracy = self.calculate_accuracy(model_output_labels = tree_output_labels)
+		entropy = self.calculate_weighted_entropy(tree=individual.genotype)
+		gini = self.calculate_weighted_gini(tree=individual.genotype)
+		return accuracy, entropy, gini
+	
 	def _sort_individuals(self, population = None, objective_index = 0):
 		"""
 		Sorts the poopulation according to the objective object in self.objectives[objective_index]
@@ -1287,8 +1306,11 @@ class DecisionTree_EA: #oblique, binary trees
 			gap = abs(best_value-worst_value)
 			best_individual.crowding_distance = np.inf
 			worst_individual.crowding_distance = np.inf
-			for individual_index, individual in enumerate(sorted_population[1:-1]):
-				individual.crowding_distance = individual.crowding_distance + abs((sorted_population[individual_index + 2].objective_values[objective_index] - sorted_population[individual_index].objective_values[objective_index])/gap)
+			if gap != 0:
+				for individual_index, individual in enumerate(sorted_population[1:-1]):
+					individual.crowding_distance = individual.crowding_distance + abs((sorted_population[individual_index + 2].objective_values[objective_index] - sorted_population[individual_index].objective_values[objective_index])/gap)
+			else:
+				pass
 	
 		irrelevants = [ind for ind in self.population if ind.crowding_distance==0]
 		for i,p in enumerate(irrelevants):

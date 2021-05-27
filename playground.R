@@ -8,7 +8,7 @@ data<-GermanCredit
 C <- Classifier(data, choose_regression = "Ridge Regression", 100)
 forest <- C$Trees
 dataset <- C$Train_data
-
+rpart.plot(forest[[1]])
 
 use_virtualenv("temp_env")
 reticulate::source_python("Source_EA.py")
@@ -18,7 +18,7 @@ crucial_values_df <- NULL
 update_inclusion_of_objectives <- function(){
   PDT$'add_objective'(objective_name = "entropy", to_max = FALSE)
   #PDT$'add_objective'(objective_name = "max_depth", to_max = FALSE)
-  #PDT$'add_objective'(objective_name = "nodes", to_max = FALSE)
+  PDT$'add_objective'(objective_name = "nodes", to_max = FALSE)
 }
 
 view_tree <- function(individual=NULL, best_tree = NULL){
@@ -74,7 +74,7 @@ PDT <<- DecisionTree_EA(tournament_size = 5,
                         max_depth = 6,
                         population_size = 100,
                         uniform_mutation_rate = 0,
-                        forced_full = TRUE
+                        forced_full = FALSE
 )
 
 #Create a reference to the dataset in the EA, create attribute objects for each
@@ -158,8 +158,8 @@ crucial_values_df <<- crucial_values
 
 
 PDT$'_ensure_population_quality'()
-PDT$'evaluate_population'()
-PDT$'_fast_nondominated_sort'()
+#PDT$'evaluate_population'()
+#PDT$'_fast_nondominated_sort'()
 length(PDT$population)
 PDT$generation
 show_depths()
