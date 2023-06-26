@@ -326,18 +326,14 @@ shinyServer(function(input, output, session){
   ##########  EVOLUTIONARY ALGORITHM ###################################################
   ######################################################################################
   ######################################################################################
-
-  #library("reticulate")
-  #virtualenv_dir <- "fresh"
-  #use_virtualenv(virtualenv_dir)
   
-   PYTHON_DEPENDENCIES = c('pandas','numpy')
-   virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-   python_path = Sys.getenv('PYTHON_PATH')
-   reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-   reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES, ignore_installed=TRUE)
-   reticulate::use_virtualenv(virtualenv_dir, required = T)
-  reticulate::source_python("Source_EA.py")
+  library("reticulate")
+
+  PYTHON_DEPENDENCIES = c('pandas','numpy')
+  virtualenv_create(envname = "myenv")
+  virtualenv_install(envname = "myenv", packages = PYTHON_DEPENDENCIES)
+  use_virtualenv("myenv")
+  source_python("Source_EA.py")
   
   #Parameters
   available_objectives <- c("accuracy", "nodes", "gini", "entropy", "max_depth") #order matters
