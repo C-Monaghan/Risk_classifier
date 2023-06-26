@@ -321,14 +321,10 @@ shinyServer(function(input, output, session){
   
   
   
-  ######################################################################################
-  ######################################################################################
-  ##########  EVOLUTIONARY ALGORITHM ###################################################
-  ######################################################################################
-  ######################################################################################
-  
+# EVOLUTIONARY ALGORITHM ------------------------------------------------------
   library("reticulate")
 
+  # Creating a virtual environment where both "pandas" and "numpy" are installed
   PYTHON_DEPENDENCIES = c('pandas','numpy')
   virtualenv_create(envname = "myenv")
   virtualenv_install(envname = "myenv", packages = PYTHON_DEPENDENCIES)
