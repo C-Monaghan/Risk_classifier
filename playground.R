@@ -10,7 +10,7 @@ forest <- C$Trees
 dataset <- C$Train_data
 rpart.plot(forest[[1]])
 
-use_virtualenv("temp_env")
+use_virtualenv("myenv")
 reticulate::source_python("Source_EA.py")
 
 crucial_values_df <- NULL
