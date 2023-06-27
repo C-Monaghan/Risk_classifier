@@ -123,12 +123,12 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   
   
   # Checking the labels and changing them into Good and Bad.
-  if(levels(default_data[,1])==c("FALSE","TRUE")){
+  if(all(levels(default_data[,1])==c("FALSE","TRUE"))){
     levels(default_data[,1])[levels(default_data[,1])=="FALSE"] <- "Bad"
     levels(default_data[,1])[levels(default_data[,1])=="TRUE"] <- "Good"
     
     
-  }else if(levels(default_data[,1])==c("0","1")){
+  }else if(all(levels(default_data[,1])==c("0","1"))){
     levels(default_data[,1])[levels(default_data[,1])=="0"] <- "Bad"
     levels(default_data[,1])[levels(default_data[,1])=="1"] <- "Good"
     
@@ -145,9 +145,18 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   n <- length(Cols)
   
   # Making combination of columns/variable names with minimum 3 variables
-  # selection=100
+  selection <- 100
   minimum_columns <- 3
-  id <- lapply(1:(selection),function(i)sample(seq(n),sample(seq(minimum_columns,n))))
+  
+  # id <- lapply(1:selection, function(i){
+  #   sample(seq(n), sample(seq(minimum_columns), n))
+  # })
+  # 
+  id <- lapply(1:selection, function(i) {
+    sample(seq(n), sample(seq(minimum_columns, n - 1), 1), replace = TRUE)
+  })
+  
+  
   id[[1]] <- seq(n)
   
   
@@ -158,7 +167,7 @@ Classifier<-function(default_data,choose_regression = "Ridge Regression",selecti
   #~~~~~~~~ Dividing the data into testing and training
   
   ## set the seed to make your partition reproducible
-  set.seed(1) 
+  set.seed(1)
   
   ## 75% of the sample size
   sample = sample.split(default_data$Class, SplitRatio = .70)
