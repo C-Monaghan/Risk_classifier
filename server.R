@@ -326,9 +326,10 @@ shinyServer(function(input, output, session){
 
   # Creating a virtual environment where both "pandas" and "numpy" are installed
   PYTHON_DEPENDENCIES = c('pandas','numpy')
-  virtualenv_create(envname = "myenv")
-  virtualenv_install(envname = "myenv", packages = PYTHON_DEPENDENCIES)
-  use_virtualenv("myenv")
+  virtualenv_create(envname = "r-reticulate")
+  virtualenv_install(envname = "r-reticulate", 
+                     packages = PYTHON_DEPENDENCIES)
+  use_virtualenv("r-reticulate")
   source_python("Source_EA.py")
   
   #Parameters
